@@ -1,0 +1,896 @@
+Sub Main()
+
+    Call MsgBoxWithOptions
+    Call CopyGoogleDataToNewSheet
+    
+    Call SortAscendingColumnBExceptFirstRow
+
+    Call CreateYP_SP
+    Call ApplyFilterAndCopy(ThisWorkbook.Sheets("Sheet1"), ThisWorkbook.Sheets("YP&SP"), "Super Pages", 1, "P") ' Column P for SP
+    Call ApplyFilterAndCopy(ThisWorkbook.Sheets("Sheet1"), ThisWorkbook.Sheets("YP&SP"), "Yellow Pages", 2, "P") ' Column P for YP
+
+    Call CreateVitals_Webmd
+    Call ApplyFilterAndCopy(ThisWorkbook.Sheets("Sheet1"), ThisWorkbook.Sheets("V,W"), "Vitals", 1, "P") ' Column P for Vitals
+    Call ApplyFilterAndCopy(ThisWorkbook.Sheets("Sheet1"), ThisWorkbook.Sheets("V,W"), "WebMD", 2, "P") ' Column P for WebMD
+
+    Call CreateHealthgades_sharecare
+    Call ApplyFilterAndCopy(ThisWorkbook.Sheets("Sheet1"), ThisWorkbook.Sheets("HG,SC"), "Sharecare", 1, "P") ' Column P for Sharecare
+    Call ApplyFilterAndCopy(ThisWorkbook.Sheets("Sheet1"), ThisWorkbook.Sheets("HG,SC"), "Healthgrades", 2, "P") ' Column P for Healthgrades
+
+    Call ColorDuplicates(ThisWorkbook.Sheets("YP&SP"))
+    Call ColorDuplicates(ThisWorkbook.Sheets("V,W"))
+    Call ColorDuplicates(ThisWorkbook.Sheets("HG,SC"))
+    
+    Call FilterAndCopyDoctorsHighlightDuplicates
+    Call FilterAndCopyVitalssHighlightDuplicates
+    Call FilterAndCopySharecaresHighlightDuplicates
+    Call FilterAndCopyHealthgradessHighlightDuplicates
+    Call FilterAndCopyWebmdsHighlightDuplicates
+    Call FilterAndCopyDocspotHighlightDuplicates
+
+    Call HarvesterCount
+    Call MissingDS_Combined_Compared
+    
+    Call CopyAndFormatURLs
+    
+    Call CalculateColumnCDifference
+
+  MsgBox "All scripts have been run.", vbInformation
+  
+
+End Sub
+
+Sub MsgBoxWithOptions()
+  Dim result As Integer
+
+  result = MsgBox("Do you want to Check your dump? .", vbYesNoCancel + vbQuestion, "Confirmation")
+
+  Select Case result
+    Case vbYes
+      MsgBox "Results may be inaccurate.", vbInformation, "Result"
+      ' Add code to execute if Yes is clicked
+    Case vbNo
+      MsgBox "You clicked No The dump will run anyway .", vbInformation, "Result"
+      ' Add code to execute if No is clicked
+    Case vbCancel
+      MsgBox "You clicked Cancel The dump will run anyway .", vbInformation, "Result"
+      ' Add code to execute if Cancel is clicked
+  End Select
+End Sub
+
+Sub CopyGoogleDataToNewSheet()
+
+  Dim wsSource As Worksheet, wsTarget As Worksheet
+  Dim lastRow As Long, i As Long, targetRow As Long
+  Dim newSheetName As String
+  Dim colIndex As Variant 'Array to store column indices
+  Dim j As Long
+  Dim targetColIndex As Variant ' Array for target columns
+  Dim sourceRange As Range, targetRange As Range
+
+  ' Set the source worksheet
+  Set wsSource = ThisWorkbook.Sheets("Sheet1") ' ***DOUBLE CHECK SHEET NAME***
+
+  ' Find the last row in column P
+  lastRow = wsSource.Cells(wsSource.Rows.Count, "P").End(xlUp).Row
+
+  ' Create a new sheet (or activate it if it exists)
+  newSheetName = "Place ID_" & wsSource.Name
+  On Error Resume Next ' Handle potential error if sheet already exists
+  Set wsTarget = ThisWorkbook.Sheets(newSheetName)
+  On Error GoTo 0 'Reset error handling
+  If wsTarget Is Nothing Then 'Create if not exist
+    Set wsTarget = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    wsTarget.Name = newSheetName
+  End If
+
+  ' Define the source columns to copy (B, G, N, O, P, M)
+  colIndex = Array(2, 7, 14, 15, 16, 13) ' Column B=2, G=7, N=14, O=15, P=16, M=13
+
+  ' Define the target columns (A, B, C, D, E, F, G)
+  targetColIndex = Array(1, 2, 3, 4, 5, 6, 7) ' A=1, B=2, C=3, D=4, E=5, F=6, G=7
+
+  ' Copy the header row
+    For j = LBound(colIndex) To UBound(colIndex)
+        wsSource.Cells(1, colIndex(j)).Copy wsTarget.Cells(1, targetColIndex(j))
+    Next j
+
+
+  ' Initialize the target row counter
+  targetRow = 2
+
+  ' Loop through each row
+  For i = 2 To lastRow
+
+    ' Check if the value in column P is "google" (case-insensitive)
+    If LCase(wsSource.Cells(i, "P").Value) = "google" Then
+
+      ' Copy only the specified columns
+        For j = LBound(colIndex) To UBound(colIndex)
+            wsSource.Cells(i, colIndex(j)).Copy wsTarget.Cells(targetRow, targetColIndex(j))
+        Next j
+
+      ' Increment the target row counter
+      targetRow = targetRow + 1
+
+    End If
+
+  Next i
+
+  ' Autofit columns in the target sheet (optional)
+  wsTarget.Columns.AutoFit
+
+  ' Set column B width to 60 in the target sheet
+  wsTarget.Columns("B").ColumnWidth = 60  ' Or wsTarget.Columns(2).ColumnWidth = 60
+
+  ' Highlight duplicates in column F
+  Call HighlightDuplicates(wsTarget, "F")
+
+  ' Optional confirmation message
+  MsgBox "Data copied to sheet '" & newSheetName & "'", vbInformation
+
+End Sub
+
+Sub HighlightDuplicates(ws As Worksheet, colName As String)
+  Dim lastRow As Long
+  Dim rng As Range
+
+  lastRow = ws.Cells(ws.Rows.Count, colName).End(xlUp).Row ' Last row in specified column
+
+  If lastRow > 1 Then ' Only highlight if there's more than one row of data
+
+    Set rng = ws.Range(colName & "2:" & colName & lastRow) ' Range to check for duplicates (start from row 2)
+
+    rng.FormatConditions.Delete ' Clear existing conditional formatting
+
+    With rng.FormatConditions.AddUniqueValues
+      .DupeUnique = xlDuplicate
+      With .Font
+        .Color = -16383844 ' Red
+      End With
+      With .Interior
+        .PatternColorIndex = xlAutomatic
+        .Color = 13551615 ' Light red
+      End With
+    End With
+
+    rng.FormatConditions(rng.FormatConditions.Count).SetFirstPriority
+  End If
+
+End Sub
+
+
+Sub FilterAndCopyDoctorsHighlightDuplicates()
+
+  Dim wsSource As Worksheet, wsDest As Worksheet
+  Dim lastRow As Long, i As Long, destRow As Long
+  Dim dict As Object ' For storing unique values
+  Dim val As String
+
+  Set dict = CreateObject("Scripting.Dictionary")
+
+  ' Set worksheets (with error handling)
+  On Error Resume Next
+  Set wsSource = ThisWorkbook.Sheets("Sheet1")
+  On Error GoTo 0
+
+  If wsSource Is Nothing Then
+    MsgBox "Sheet 'Sheet1' not found!", vbCritical
+    Exit Sub
+  End If
+
+  On Error Resume Next ' Check if "DUP DOC" exists
+  Set wsDest = ThisWorkbook.Sheets("DUP DOC")
+  On Error GoTo 0
+
+  If wsDest Is Nothing Then
+    Set wsDest = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    wsDest.Name = "DUP DOC"
+  End If
+
+
+  lastRow = wsSource.Cells(Rows.Count, "P").End(xlUp).Row
+
+  If lastRow = 0 Then
+    MsgBox "No data found in column P of Sheet1.", vbInformation
+    Exit Sub
+  End If
+
+  destRow = 1 ' Start writing to row 1 of the destination sheet
+
+  For i = 1 To lastRow
+    If InStr(1, wsSource.Cells(i, "P").Value, "doctor", vbTextCompare) > 0 Then
+      val = wsSource.Cells(i, "B").Value
+
+      ' Check for duplicates using the dictionary
+      If dict.Exists(val) Then
+        ' Duplicate found: highlight in both sheets
+        wsSource.Cells(i, "B").Interior.Color = vbYellow ' Highlight in source sheet
+        wsDest.Cells(dict(val), "A").Interior.Color = vbYellow ' Highlight in destination sheet
+      Else
+        ' Unique value: add to dictionary and copy to destination sheet
+        dict.Add val, destRow
+        wsDest.Cells(destRow, "A").Value = val
+        destRow = destRow + 1
+      End If
+    End If
+  Next i
+
+  Set dict = Nothing ' Clear the dictionary
+End Sub
+
+Sub FilterAndCopyVitalssHighlightDuplicates()
+
+  Dim wsSource As Worksheet, wsDest As Worksheet
+  Dim lastRow As Long, i As Long, destRow As Long
+  Dim dict As Object ' For storing unique values
+  Dim val As String
+
+  Set dict = CreateObject("Scripting.Dictionary")
+
+  ' Set worksheets (with error handling)
+  On Error Resume Next
+  Set wsSource = ThisWorkbook.Sheets("Sheet1")
+  On Error GoTo 0
+
+  If wsSource Is Nothing Then
+    MsgBox "Sheet 'Sheet1' not found!", vbCritical
+    Exit Sub
+  End If
+
+  On Error Resume Next ' Check if "DUP VIT" exists
+  Set wsDest = ThisWorkbook.Sheets("DUP VIT")
+  On Error GoTo 0
+
+  If wsDest Is Nothing Then
+    Set wsDest = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    wsDest.Name = "DUP VIT"
+  End If
+
+
+  lastRow = wsSource.Cells(Rows.Count, "P").End(xlUp).Row
+
+  If lastRow = 0 Then
+    MsgBox "No data found in column P of Sheet1.", vbInformation
+    Exit Sub
+  End If
+
+  destRow = 1 ' Start writing to row 1 of the destination sheet
+
+  For i = 1 To lastRow
+    If InStr(1, wsSource.Cells(i, "P").Value, "Vitals", vbTextCompare) > 0 Then
+      val = wsSource.Cells(i, "B").Value
+
+      ' Check for duplicates using the dictionary
+      If dict.Exists(val) Then
+        ' Duplicate found: highlight in both sheets
+        wsSource.Cells(i, "B").Interior.Color = vbYellow ' Highlight in source sheet
+        wsDest.Cells(dict(val), "A").Interior.Color = vbYellow ' Highlight in destination sheet
+      Else
+        ' Unique value: add to dictionary and copy to destination sheet
+        dict.Add val, destRow
+        wsDest.Cells(destRow, "A").Value = val
+        destRow = destRow + 1
+      End If
+    End If
+  Next i
+
+  Set dict = Nothing ' Clear the dictionary
+End Sub
+
+Sub FilterAndCopySharecaresHighlightDuplicates()
+
+  Dim wsSource As Worksheet, wsDest As Worksheet
+  Dim lastRow As Long, i As Long, destRow As Long
+  Dim dict As Object ' For storing unique values
+  Dim val As String
+
+  Set dict = CreateObject("Scripting.Dictionary")
+
+  ' Set worksheets (with error handling)
+  On Error Resume Next
+  Set wsSource = ThisWorkbook.Sheets("Sheet1")
+  On Error GoTo 0
+
+  If wsSource Is Nothing Then
+    MsgBox "Sheet 'Sheet1' not found!", vbCritical
+    Exit Sub
+  End If
+
+  On Error Resume Next ' Check if "DUP SC" exists
+  Set wsDest = ThisWorkbook.Sheets("DUP SC")
+  On Error GoTo 0
+
+  If wsDest Is Nothing Then
+    Set wsDest = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    wsDest.Name = "DUP SC"
+  End If
+
+
+  lastRow = wsSource.Cells(Rows.Count, "P").End(xlUp).Row
+
+  If lastRow = 0 Then
+    MsgBox "No data found in column P of Sheet1.", vbInformation
+    Exit Sub
+  End If
+
+  destRow = 1 ' Start writing to row 1 of the destination sheet
+
+  For i = 1 To lastRow
+    If InStr(1, wsSource.Cells(i, "P").Value, "Sharecare", vbTextCompare) > 0 Then
+      val = wsSource.Cells(i, "B").Value
+
+      ' Check for duplicates using the dictionary
+      If dict.Exists(val) Then
+        ' Duplicate found: highlight in both sheets
+        wsSource.Cells(i, "B").Interior.Color = vbYellow ' Highlight in source sheet
+        wsDest.Cells(dict(val), "A").Interior.Color = vbYellow ' Highlight in destination sheet
+      Else
+        ' Unique value: add to dictionary and copy to destination sheet
+        dict.Add val, destRow
+        wsDest.Cells(destRow, "A").Value = val
+        destRow = destRow + 1
+      End If
+    End If
+  Next i
+
+  Set dict = Nothing ' Clear the dictionary
+End Sub
+
+Sub FilterAndCopyHealthgradessHighlightDuplicates()
+
+  Dim wsSource As Worksheet, wsDest As Worksheet
+  Dim lastRow As Long, i As Long, destRow As Long
+  Dim dict As Object ' For storing unique values
+  Dim val As String
+
+  Set dict = CreateObject("Scripting.Dictionary")
+
+  ' Set worksheets (with error handling)
+  On Error Resume Next
+  Set wsSource = ThisWorkbook.Sheets("Sheet1")
+  On Error GoTo 0
+
+  If wsSource Is Nothing Then
+    MsgBox "Sheet 'Sheet1' not found!", vbCritical
+    Exit Sub
+  End If
+
+  On Error Resume Next ' Check if "DUP HG" exists
+  Set wsDest = ThisWorkbook.Sheets("DUP HG")
+  On Error GoTo 0
+
+  If wsDest Is Nothing Then
+    Set wsDest = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    wsDest.Name = "DUP HG"
+  End If
+
+
+  lastRow = wsSource.Cells(Rows.Count, "P").End(xlUp).Row
+
+  If lastRow = 0 Then
+    MsgBox "No data found in column P of Sheet1.", vbInformation
+    Exit Sub
+  End If
+
+  destRow = 1 ' Start writing to row 1 of the destination sheet
+
+  For i = 1 To lastRow
+    If InStr(1, wsSource.Cells(i, "P").Value, "Healthgrades", vbTextCompare) > 0 Then
+      val = wsSource.Cells(i, "B").Value
+
+      ' Check for duplicates using the dictionary
+      If dict.Exists(val) Then
+        ' Duplicate found: highlight in both sheets
+        wsSource.Cells(i, "B").Interior.Color = vbYellow ' Highlight in source sheet
+        wsDest.Cells(dict(val), "A").Interior.Color = vbYellow ' Highlight in destination sheet
+      Else
+        ' Unique value: add to dictionary and copy to destination sheet
+        dict.Add val, destRow
+        wsDest.Cells(destRow, "A").Value = val
+        destRow = destRow + 1
+      End If
+    End If
+  Next i
+
+  Set dict = Nothing ' Clear the dictionary
+End Sub
+Sub FilterAndCopyDocspotHighlightDuplicates()
+
+  Dim wsSource As Worksheet, wsDest As Worksheet
+  Dim lastRow As Long, i As Long, destRow As Long
+  Dim dict As Object ' For storing unique values
+  Dim val As String
+
+  Set dict = CreateObject("Scripting.Dictionary")
+
+  ' Set worksheets (with error handling)
+  On Error Resume Next
+  Set wsSource = ThisWorkbook.Sheets("Sheet1")
+  On Error GoTo 0
+
+  If wsSource Is Nothing Then
+    MsgBox "Sheet 'Sheet1' not found!", vbCritical
+    Exit Sub
+  End If
+
+  On Error Resume Next ' Check if "DUP DP" exists
+  Set wsDest = ThisWorkbook.Sheets("DUP DP")
+  On Error GoTo 0
+
+  If wsDest Is Nothing Then
+    Set wsDest = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    wsDest.Name = "DUP DP"
+  End If
+
+
+  lastRow = wsSource.Cells(Rows.Count, "P").End(xlUp).Row
+
+  If lastRow = 0 Then
+    MsgBox "No data found in column P of Sheet1.", vbInformation
+    Exit Sub
+  End If
+
+  destRow = 1 ' Start writing to row 1 of the destination sheet
+
+  For i = 1 To lastRow
+    If InStr(1, wsSource.Cells(i, "P").Value, "Docspot", vbTextCompare) > 0 Then
+      val = wsSource.Cells(i, "B").Value
+
+      ' Check for duplicates using the dictionary
+      If dict.Exists(val) Then
+        ' Duplicate found: highlight in both sheets
+        wsSource.Cells(i, "B").Interior.Color = vbYellow ' Highlight in source sheet
+        wsDest.Cells(dict(val), "A").Interior.Color = vbYellow ' Highlight in destination sheet
+      Else
+        ' Unique value: add to dictionary and copy to destination sheet
+        dict.Add val, destRow
+        wsDest.Cells(destRow, "A").Value = val
+        destRow = destRow + 1
+      End If
+    End If
+  Next i
+
+  Set dict = Nothing ' Clear the dictionary
+End Sub
+
+Sub FilterAndCopyWebmdsHighlightDuplicates()
+
+  Dim wsSource As Worksheet, wsDest As Worksheet
+  Dim lastRow As Long, i As Long, destRow As Long
+  Dim dict As Object ' For storing unique values
+  Dim val As String
+
+  Set dict = CreateObject("Scripting.Dictionary")
+
+  ' Set worksheets (with error handling)
+  On Error Resume Next
+  Set wsSource = ThisWorkbook.Sheets("Sheet1")
+  On Error GoTo 0
+
+  If wsSource Is Nothing Then
+    MsgBox "Sheet 'Sheet1' not found!", vbCritical
+    Exit Sub
+  End If
+
+  On Error Resume Next ' Check if "DUP WMD" exists
+  Set wsDest = ThisWorkbook.Sheets("DUP WMD")
+  On Error GoTo 0
+
+  If wsDest Is Nothing Then
+    Set wsDest = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    wsDest.Name = "DUP WMD"
+  End If
+
+
+  lastRow = wsSource.Cells(Rows.Count, "P").End(xlUp).Row
+
+  If lastRow = 0 Then
+    MsgBox "No data found in column P of Sheet1.", vbInformation
+    Exit Sub
+  End If
+
+  destRow = 1 ' Start writing to row 1 of the destination sheet
+
+  For i = 1 To lastRow
+    If InStr(1, wsSource.Cells(i, "P").Value, "Webmd", vbTextCompare) > 0 Then
+      val = wsSource.Cells(i, "B").Value
+
+      ' Check for duplicates using the dictionary
+      If dict.Exists(val) Then
+        ' Duplicate found: highlight in both sheets
+        wsSource.Cells(i, "B").Interior.Color = vbYellow ' Highlight in source sheet
+        wsDest.Cells(dict(val), "A").Interior.Color = vbYellow ' Highlight in destination sheet
+      Else
+        ' Unique value: add to dictionary and copy to destination sheet
+        dict.Add val, destRow
+        wsDest.Cells(destRow, "A").Value = val
+        destRow = destRow + 1
+      End If
+    End If
+  Next i
+
+  Set dict = Nothing ' Clear the dictionary
+End Sub
+
+
+
+
+
+Sub SortAscendingColumnBExceptFirstRow()
+    Dim ws As Worksheet
+    Dim lastRow As Long
+
+    Set ws = ThisWorkbook.Sheets("Sheet1")
+    lastRow = ws.Cells(ws.Rows.Count, "B").End(xlUp).Row
+    ws.Range("A2:B" & lastRow).Sort Key1:=ws.Range("B2"), Order1:=xlAscending, Header:=xlNo
+End Sub
+
+Sub CreateYP_SP()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    ws.Name = "YP&SP"
+End Sub
+
+Sub CreateVitals_Webmd()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    ws.Name = "V,W"
+End Sub
+
+Sub CreateHealthgades_sharecare()
+    Dim ws As Worksheet
+    Set ws = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    ws.Name = "HG,SC"
+End Sub
+
+
+Sub ApplyFilterAndCopy(wsSource As Worksheet, wsTarget As Worksheet, filterCriteria As String, targetColumn As Integer, filterColumn As String)
+    Dim lastRow As Long, i As Long, j As Long
+    Dim copyRange As Range
+
+    lastRow = wsSource.Cells(wsSource.Rows.Count, filterColumn).End(xlUp).Row ' Use filterColumn
+    wsSource.Range(filterColumn & "1:" & filterColumn & lastRow).AutoFilter Field:=1, Criteria1:=filterCriteria ' Use filterColumn
+
+    j = 1
+    For i = 2 To lastRow
+        If wsSource.Cells(i, filterColumn).Value = filterCriteria Then ' Use filterColumn
+            Set copyRange = wsSource.Cells(i, 2)
+            copyRange.Copy wsTarget.Cells(j, targetColumn)
+            j = j + 1
+        End If
+    Next i
+
+    wsSource.AutoFilterMode = False
+    wsTarget.Columns.AutoFit
+End Sub
+
+Sub ColorDuplicates(ws As Worksheet)
+    Dim rng As Range
+    Dim lastRow As Long
+
+    lastRow = ws.UsedRange.Rows.Count
+    Set rng = ws.Range("A1:ZZ" & lastRow)
+
+    rng.FormatConditions.Delete
+
+    With rng.FormatConditions.AddUniqueValues
+        .DupeUnique = xlDuplicate
+        With .Font
+            .Color = -16383844 ' Red
+        End With
+        With .Interior
+            .PatternColorIndex = xlAutomatic
+            .Color = 13551615 ' Light red
+        End With
+    End With
+
+    rng.FormatConditions(rng.FormatConditions.Count).SetFirstPriority
+End Sub
+
+
+Sub HarvesterCount()
+
+  ' Declare variables
+  Dim ws As Worksheet, newWs As Worksheet
+  Dim lastRow As Long, i As Long
+  Dim dict As Object
+
+  ' Set the worksheet to work with
+  Set ws = ThisWorkbook.Sheets("Sheet1")
+
+  ' Find the last row in column B
+  lastRow = ws.Cells(Rows.Count, "B").End(xlUp).Row
+
+  ' Create a new sheet named "Harvester Count"
+  Set newWs = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+  newWs.Name = "Harvester Count"
+
+  ' Create a dictionary to store unique values and their counts
+  Set dict = CreateObject("Scripting.Dictionary")
+
+  ' Loop through the values in column B
+  For i = 1 To lastRow
+    ' Get the value from column B
+    Dim val As String
+    val = ws.Cells(i, "B").Value
+
+    ' If the value is not empty, add it to the dictionary or increment its count
+    If val <> "" Then
+      If Not dict.Exists(val) Then
+        dict.Add val, 1
+      Else
+        dict(val) = dict(val) + 1
+      End If
+    End If
+  Next i
+
+  ' Write the unique values and their counts to the new sheet
+  i = 1
+  For Each Key In dict.Keys
+    newWs.Cells(i, "A").Value = Key
+    newWs.Cells(i, "B").Value = dict(Key)
+    i = i + 1
+  Next Key
+  
+  'Name Column B1 as "Harvester Count"
+  newWs.Cells(1, "B").Value = "Harvester Count" 'This line has been modified
+
+End Sub
+Sub MissingDS_Combined_Compared()
+
+  ' Declare variables
+  Dim ws As Worksheet, newWs As Worksheet
+  Dim lastRow As Long, i As Long, destRow As Long
+  Dim dict As Object
+
+  ' Set the worksheet to work with
+  Set ws = ThisWorkbook.Sheets("Sheet1")
+
+  ' Find the last row (use the largest of B and P)
+  lastRow = Application.WorksheetFunction.Max(ws.Cells(Rows.Count, "B").End(xlUp).Row, ws.Cells(Rows.Count, "P").End(xlUp).Row)
+
+  ' Create/Access "Missing DS" sheet
+  On Error Resume Next
+  Set newWs = ThisWorkbook.Sheets("Missing DS")
+  On Error GoTo 0
+  If newWs Is Nothing Then
+    Set newWs = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    newWs.Name = "Missing DS"
+  End If
+
+  ' Clear existing content
+  newWs.Cells.ClearContents
+
+  ' --- Unique Values from Column B ---
+  Set dict = CreateObject("Scripting.Dictionary")
+  For i = 1 To lastRow
+    Dim val As String
+    val = ws.Cells(i, "B").Value
+    If val <> "" Then
+      If Not dict.Exists(val) Then
+        dict.Add val, 1
+      End If
+    End If
+  Next i
+
+  i = 1
+  newWs.Cells(1, "A").Value = "Unique DS Values" ' Header for unique values
+  For Each Key In dict.Keys
+    newWs.Cells(i, "A").Value = Key
+    i = i + 1
+  Next Key
+
+  ' --- Filtered Values from Column B (Docspot) ---
+  destRow = 1
+  newWs.Cells(1, "B").Value = "Docspot Values from Sheet1 Column B" ' Header
+  For i = 1 To lastRow
+    If LCase(ws.Cells(i, "P").Value) = LCase("Docspot") Then
+      newWs.Cells(destRow + 1, "B").Value = ws.Cells(i, "B").Value ' Start from row 2
+      destRow = destRow + 1
+    End If
+  Next i
+
+  ' --- Comparison between Column A and B ---
+  newWs.Cells(1, "C").Value = "Comparison" ' Header
+  Dim lastRowA As Long, lastRowB As Long
+  lastRowA = newWs.Cells(Rows.Count, "A").End(xlUp).Row
+  lastRowB = newWs.Cells(Rows.Count, "B").End(xlUp).Row
+
+  Dim j As Long
+  For i = 2 To lastRowA ' Start from row 2 (after headers)
+    Dim found As Boolean
+    found = False
+    For j = 2 To lastRowB
+      If newWs.Cells(i, "A").Value = newWs.Cells(j, "B").Value Then
+        found = True
+        Exit For ' Exit inner loop once found
+      End If
+    Next j
+
+    If found Then
+      newWs.Cells(i, "C").Value = "Match"
+    Else
+      newWs.Cells(i, "C").Value = "No Match"
+    End If
+  Next i
+
+End Sub
+Sub CopyAndFormatURLs()
+    ' --- PART 1: FILTER AND COPY COLUMN G ---
+    
+    ' Define the sheets and variables
+    Dim sourceSheet As Worksheet
+    Dim destinationSheet As Worksheet
+    Dim lastRow As Long
+    
+    ' Set the source sheet
+    On Error GoTo ErrorHandler
+    Set sourceSheet = ThisWorkbook.Sheets("Sheet1")
+    
+    ' Check if "dup well" exists and delete it
+    Application.DisplayAlerts = False
+    On Error Resume Next
+    ThisWorkbook.Sheets("dup well").Delete
+    On Error GoTo ErrorHandler
+    Application.DisplayAlerts = True
+    
+    ' Create a new sheet named "dup well"
+    Set destinationSheet = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    destinationSheet.Name = "dup well"
+    
+    ' Find the last row of data in the source sheet
+    lastRow = sourceSheet.Cells(sourceSheet.Rows.Count, "A").End(xlUp).Row
+    
+    ' Apply the autofilter to column P on the source sheet
+    With sourceSheet
+        .AutoFilterMode = False ' Remove any previous filters
+        .Range("A1:P" & lastRow).AutoFilter Field:=16, Criteria1:="wellness"
+        
+        ' Check if any rows are visible after filtering
+        If .AutoFilter.Range.Rows.Count > 1 Then
+            ' Copy the header of column G to the new sheet
+            .Range("G1").Copy destinationSheet.Range("A1")
+            
+            ' Copy the visible cells of column G (excluding the header)
+            Dim copyRangeG As Range
+            On Error Resume Next
+            Set copyRangeG = .Range("G2:G" & lastRow).SpecialCells(xlCellTypeVisible)
+            On Error GoTo ErrorHandler
+            
+            If Not copyRangeG Is Nothing Then
+                copyRangeG.Copy
+                destinationSheet.Range("A2").PasteSpecial Paste:=xlPasteValues
+            End If
+        Else
+            MsgBox "No rows with 'wellness' were found in column P.", vbInformation
+            .AutoFilterMode = False
+            Exit Sub
+        End If
+        
+        ' Clear the filter from the source sheet
+        .AutoFilterMode = False
+    End With
+    
+    ' --- PART 2: PERFORM TEXT TO COLUMNS AND CONDITIONAL FORMATTING ---
+    
+    ' Get the last row of data in the new sheet
+    lastRow = destinationSheet.Cells(destinationSheet.Rows.Count, "A").End(xlUp).Row
+    
+    ' Set the range for Text to Columns (from the second row down)
+    Dim textToColumnsRange As Range
+    Set textToColumnsRange = destinationSheet.Range("A2:A" & lastRow)
+    
+    ' Check if there is data to process
+    If lastRow >= 2 Then
+        ' Apply the Text to Columns method
+        textToColumnsRange.TextToColumns _
+            Destination:=destinationSheet.Range("A2"), _
+            DataType:=xlDelimited, _
+            Other:=True, _
+            OtherChar:="/"
+            
+        ' Get the last column after Text to Columns
+        Dim lastCol As Long
+        lastCol = destinationSheet.Cells(1, destinationSheet.Columns.Count).End(xlToLeft).Column
+        
+        ' Set the range for conditional formatting (the entire used range)
+        Dim cfRange As Range
+        Set cfRange = destinationSheet.UsedRange
+        
+        ' Clear any existing conditional formatting
+        cfRange.FormatConditions.Delete
+        
+        ' Apply conditional formatting to highlight duplicate values
+        Dim myRule As FormatCondition
+        Set myRule = cfRange.FormatConditions.Add( _
+            Type:=xlExpression, _
+            Formula1:="=COUNTIF(" & cfRange.Address & ",A1)>1")
+            
+        ' Set the formatting (e.g., light red fill)
+        With myRule.Interior
+            .Color = 255 ' Red
+            .Pattern = xlSolid
+        End With
+    End If
+    
+    ' Auto-fit the columns for better readability
+    destinationSheet.UsedRange.Columns.AutoFit
+    
+    ' Clean up
+    Application.CutCopyMode = False
+    Set sourceSheet = Nothing
+    Set destinationSheet = Nothing
+    Set copyRangeG = Nothing
+    Set textToColumnsRange = Nothing
+    Set cfRange = Nothing
+    Set myRule = Nothing
+    
+    ' Display a final success message
+    MsgBox "Filtered URL data has been copied, split into columns, and formatted for duplicates.", vbInformation
+    
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "An error occurred: " & Err.Description, vbCritical
+    Application.DisplayAlerts = True
+    Application.ScreenUpdating = True
+End Sub
+
+Sub CalculateColumnCDifference()
+    ' This macro calculates the difference between Column A and Column B
+    ' and places the result in Column C for specific worksheets.
+
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim sheetNames As Variant
+    Dim i As Long
+
+    ' Define the names of the worksheets you want to process
+    sheetNames = Array("V,W", "HG,SC", "YP&SP")
+
+    ' Loop through each sheet name in the array
+    For i = LBound(sheetNames) To UBound(sheetNames)
+        On Error Resume Next ' Handle cases where a sheet might not exist
+        Set ws = ThisWorkbook.Sheets(sheetNames(i))
+        On Error GoTo 0      ' Reset error handling
+
+        If Not ws Is Nothing Then ' Check if the worksheet was found
+            ' Activate the worksheet to perform operations
+            ws.Activate
+
+            ' Find the last row with data in Column A
+            ' This ensures the formula is applied only to rows with data
+            lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+
+            ' Ensure there's data to process beyond the header row (assuming row 1 is header)
+            If lastRow >= 2 Then
+                ' Clear any existing data in Column C from row 2 downwards
+                ws.Range("C2:C" & lastRow).ClearContents
+
+                ' Apply the formula to the first cell in Column C (C2)
+                ' The formula subtracts the value in Column B from Column A
+                ws.Range("C2").Formula = "=A2-B2"
+
+                ' AutoFill the formula down to the last row with data
+                ws.Range("C2").AutoFill Destination:=ws.Range("C2:C" & lastRow)
+
+                ' Optional: Convert the formulas to their calculated values
+                ' This prevents the values from changing if A or B are modified later
+                ' Uncomment the line below if you want to paste values instead of formulas
+                ' ws.Range("C2:C" & lastRow).Value = ws.Range("C2:C" & lastRow).Value
+
+                Debug.Print "Processed sheet: " & ws.Name & " up to row " & lastRow
+            Else
+                Debug.Print "No data to process in sheet: " & ws.Name & " (less than 2 rows)"
+            End If
+        Else
+            Debug.Print "Worksheet not found: " & sheetNames(i)
+        End If
+        Set ws = Nothing ' Clear the worksheet object for the next iteration
+    Next i
+
+    MsgBox "Difference calculation complete for specified sheets!", vbInformation
+End Sub
+
+

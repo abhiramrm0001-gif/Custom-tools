@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resilient Link Launcher</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 1000px; margin: 20px auto; padding: 20px; background-color: #f4f7f6; }
+        .container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        textarea { width: 100%; height: 150px; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: monospace; }
+        
+        .controls { display: flex; gap: 10px; margin: 20px 0; align-items: center; }
+        .btn-gen { background: #007bff; color: white; padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; flex-grow: 1; }
+        
+        #grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
+            gap: 10px; 
+            margin-top: 20px;
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px dashed #ccc;
+        }
+
+        .item-btn {
+            background: #fff; border: 1px solid #007bff; color: #007bff;
+            padding: 12px; border-radius: 5px; text-align: center;
+            cursor: pointer; text-decoration: none; font-size: 13px;
+            display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            transition: 0.2s;
+        }
+
+        .item-btn:hover { background: #007bff; color: white; }
+        .item-btn.visited { background: #e2e8f0; border-color: #94a3b8; color: #64748b; }
+        
+        .helper-text { color: #d9534f; font-weight: bold; font-size: 0.9em; margin-top: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Smart Link Launcher</h2>
+    <textarea id="input" placeholder="Paste your links/queries here...&#10;site:www.zocdoc.com CHANG: LISBETH"></textarea>
+    
+    <div class="controls">
+        <button class="btn-gen" onclick="buildGrid()">Generate</button>
+        <button onclick="location.reload()">Reset</button>
+    </div>
+
+    <div id="pop-warning" class="helper-text">⚠️ Pop-ups are blocked! Please click the icon in your address bar to "Allow".</div>
+
+    <div id="grid"></div>
+</div>
+
+<script>
+    function buildGrid() {
+        const text = document.getElementById('input').value;
+        const grid = document.getElementById('grid');
+        const warning = document.getElementById('pop-warning');
+        const lines = text.split('\n').filter(l => l.trim() !== "");
+
+        grid.innerHTML = '';
+
+        lines.forEach(line => {
+            const cleanLine = line.trim();
+            let url = "";
+
+            // Check if it's a direct URL or a search query
+            if (/^(https?:\/\/|www\.)/i.test(cleanLine)) {
+                url = cleanLine.startsWith('http') ? cleanLine : 'https://' + cleanLine;
+            } else {
+                // Properly encodes "site:www.zocdoc.com CHANG: LISBETH"
+                url = `https://www.google.com/search?q=${encodeURIComponent(cleanLine)}`;
+            }
+
+            // Get the "End of link" as the name
+            const segments = cleanLine.split(/[\/\s:]+/);
+            const displayName = segments[segments.length - 1] || "Link";
+
+            // Create an actual Anchor tag instead of just a button
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = "_blank";
+            a.className = "item-btn";
+            a.innerText = displayName;
+            
+            // Track clicks to change color
+            a.onclick = function(e) {
+                this.classList.add('visited');
+                
+                // Test if the window actually opens
+                const testTab = window.open(this.href, '_blank');
+                if (!testTab) {
+                    warning.style.display = 'block';
+                }
+                return false; // Prevent default anchor behavior since we use window.open
+            };
+
+            grid.appendChild(a);
+        });
+    }
+</script>
+
+</body>
+</html>

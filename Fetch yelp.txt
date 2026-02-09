@@ -1,0 +1,150 @@
+Option Explicit
+
+Sub FetchIDFromJSON_DynamicColumns_WithLink()
+    ' DECLARATIONS
+    Dim http As Object
+    Dim JSON As Object
+    Dim lastRow As Long
+    Dim i As Long
+    Dim url As String
+    Dim idValue As String
+    
+    ' Variables for dynamic column selection
+    Dim inputColLetter As Variant ' InputBox returns Variant
+    Dim inputColNum As Long
+    Dim idColNum As Long          ' Column for the fetched ID
+    Dim linkColNum As Long        ' NEW: Column for the final Yelp URL
+
+    ' --- 1. GET USER INPUT AND SET COLUMNS ---
+    
+    ' Prompt the user for the column letter containing the URLs
+    inputColLetter = Application.InputBox( _
+        Prompt:="Enter the COLUMN LETTER (e.g., A, B, AA) that contains the API URLs:", _
+        Title:="Input Column Selection", _
+        Type:=2) ' Type 2 for text input
+
+    ' If user cancelled (InputBox returns False)
+    If inputColLetter = False Then
+        MsgBox "Operation cancelled.", vbInformation, "Cancelled"
+        Exit Sub
+    End If
+
+    ' Trim and validate non-empty
+    inputColLetter = Trim(CStr(inputColLetter))
+    If Len(inputColLetter) = 0 Then
+        MsgBox "No column letter entered. Please try again.", vbCritical, "Input Error"
+        Exit Sub
+    End If
+    
+    ' Convert the column letter to a column number
+    On Error Resume Next
+    inputColNum = Columns(UCase$(inputColLetter)).Column
+    On Error GoTo 0
+
+    ' Validate the input column number
+    If inputColNum = 0 Then
+        MsgBox "Invalid column letter '" & inputColLetter & "'. Please try again.", vbCritical, "Input Error"
+        Exit Sub
+    End If
+    
+    ' Set the output columns:
+    idColNum = inputColNum + 1          ' ID goes in the column next to the URL
+    linkColNum = idColNum + 1           ' The final link goes one column over from the ID
+
+    ' --- 2. INITIALIZATION & SETUP ---
+    
+    ' Find last used row in the specified input column
+    lastRow = Cells(Rows.Count, inputColNum).End(xlUp).Row
+    
+    ' Add headers to the new output columns
+    Cells(1, idColNum).Value = "Fetched API ID"
+    Cells(1, linkColNum).Value = "Yelp URL" ' New header
+
+    ' --- 3. LOOP AND PROCESS API REQUESTS ---
+    
+    For i = 2 To lastRow
+        
+        ' Update the status bar
+        Application.StatusBar = "Processing row " & i & " of " & lastRow & _
+                                " (" & Format(i / lastRow, "0.0%") & " complete)..."
+        
+        url = Trim$(Cells(i, inputColNum).Value)
+        
+        If url <> "" Then
+            ' Create HTTP object
+            On Error Resume Next
+            Set http = CreateObject("MSXML2.XMLHTTP")
+            On Error GoTo 0
+
+            If http Is Nothing Then
+                Cells(i, idColNum).Value = "Error: Unable to create HTTP object"
+            Else
+                ' Synchronous GET
+                On Error Resume Next
+                http.Open "GET", url, False
+                http.Send
+                On Error GoTo 0
+                
+                ' Check HTTP Status
+                If http.Status = 200 Then
+                    
+                    ' Parse JSON using VBA-JSON (JsonConverter)
+                    On Error Resume Next
+                    Set JSON = JsonConverter.ParseJson(http.ResponseText)
+                    On Error GoTo 0
+                    
+                    If Not JSON Is Nothing Then
+                        If TypeName(JSON) = "Dictionary" Then
+                            If JSON.Exists("id") Then
+                                idValue = CStr(JSON("id"))
+                                
+                                ' *** NEW: CONCATENATE THE YELP URL ***
+                                Cells(i, idColNum).Value = idValue
+                                Cells(i, linkColNum).Value = "https://www.yelp.com/biz/" & idValue
+                                
+                            Else
+                                idValue = "ID not found"
+                                Cells(i, idColNum).Value = idValue
+                                Cells(i, linkColNum).Value = idValue ' Optional: mark link column too
+                            End If
+                        Else
+                            idValue = "Unexpected JSON type: " & TypeName(JSON)
+                            Cells(i, idColNum).Value = idValue
+                        End If
+                    Else
+                        idValue = "JSON parse error"
+                        Cells(i, idColNum).Value = idValue
+                    End If
+                
+                Else
+                    ' Write error status if the request failed
+                    Dim errorMsg As String
+                    errorMsg = "Error: " & http.Status & " (" & http.StatusText & ")"
+                    Cells(i, idColNum).Value = errorMsg
+                    Cells(i, linkColNum).Value = errorMsg ' Write error to link column as well
+                End If
+            End If
+            
+            ' Clean up objects
+            Set http = Nothing
+            Set JSON = Nothing
+            
+        Else
+            ' If the URL cell is empty
+            Cells(i, idColNum).Value = "No URL"
+            Cells(i, linkColNum).Value = "" ' Clear or leave blank
+        End If
+    Next i
+
+    ' --- 4. CLEANUP AND COMPLETION ---
+    
+    ' Clear the status bar message
+    Application.StatusBar = False
+    
+    ' Provide final feedback to the user
+    MsgBox "done.", vbInformation, "Process Complete"
+
+End Sub
+
+
+

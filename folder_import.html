@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Data Grid</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        :root { --accent: #107c10; --bg: #f3f2f1; --border: #edebe9; --text: #323130; }
+        
+        body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* Toolbar */
+        .toolbar { background: #fff; padding: 12px 20px; border-bottom: 1px solid #d1d1d1; display: flex; align-items: center; gap: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 100; }
+        .btn { padding: 8px 16px; border: 1px solid #8a8886; background: #fff; border-radius: 2px; font-size: 14px; cursor: pointer; transition: 0.1s; display: flex; align-items: center; gap: 8px; }
+        .btn:hover { background: #f3f2f1; }
+        .btn-primary { background: var(--accent); color: white; border: none; }
+        .btn-primary:hover { background: #0b5a0b; }
+        
+        input[type="text"] { flex-grow: 1; padding: 8px 12px; border: 1px solid #8a8886; outline: none; }
+        input[type="text"]:focus { border-color: var(--accent); }
+
+        /* Workspace */
+        .workspace { flex-grow: 1; display: flex; overflow: hidden; position: relative; }
+
+        /* Side Panel (Column Options) */
+        .side-panel { width: 260px; background: #fff; border-right: 1px solid var(--border); overflow-y: auto; padding: 15px; display: none; }
+        .side-panel.active { display: block; }
+        .side-panel h4 { margin: 0 0 15px 0; font-size: 12px; text-transform: uppercase; color: #605e5c; letter-spacing: 1px; }
+        .col-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; cursor: pointer; }
+        .col-item input { accent-color: var(--accent); }
+
+        /* Grid */
+        .grid-container { flex-grow: 1; overflow: auto; background: #fff; }
+        table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+        
+        thead th { 
+            position: sticky; top: 0; background: #faf9f8; padding: 10px; font-size: 12px; 
+            font-weight: 600; text-align: left; border-right: 1px solid var(--border); 
+            border-bottom: 1px solid var(--border); color: #323130; z-index: 10;
+        }
+        
+        tbody td { 
+            padding: 8px 10px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border);
+            font-size: 13px; white-space: nowrap; max-width: 400px; overflow: hidden; text-overflow: ellipsis;
+        }
+        tr:nth-child(even) { background: #fdfdfd; }
+        tr:hover td { background: #f3f2f1; }
+
+        .hidden-col { display: none !important; }
+        
+        /* Loading Overlay */
+        #loader { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.7); z-index: 1000; justify-content: center; align-items: center; font-weight: bold; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div id="loader">Processing Grid...</div>
+
+<div class="toolbar">
+    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📁 Open Excel</button>
+    <button class="btn" onclick="togglePanel()">⚙️ Column Options</button>
+    <input type="text" id="searchBox" placeholder="Filter rows..." oninput="applyFilter()">
+    <button class="btn" onclick="exportData()">📥 Export Cleaned</button>
+    <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" style="display:none">
+</div>
+
+<div class="workspace">
+    <div class="side-panel" id="sidePanel">
+        <h4>Visible Columns</h4>
+        <div id="columnToggles"></div>
+    </div>
+    
+    <div class="grid-container">
+        <table id="mainTable">
+            <thead id="thead"></thead>
+            <tbody id="tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let globalData = [];
+    let headers = [];
+    let hiddenCols = new Set();
+    const loader = document.getElementById('loader');
+
+    // --- Core Excel Cell Logic ---
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        loader.style.display = 'flex';
+        const reader = new FileReader();
+
+        reader.onload = (evt) => {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+            // "defval: ''" is the critical Excel logic that prevents column shifting
+            const json = XLSX.utils.sheet_to_json(sheet, { 
+                header: 1, 
+                defval: "", 
+                blankrows: false 
+            });
+
+            if (json.length > 0) {
+                headers = json[0];
+                globalData = json.slice(1);
+                
+                // Ensure every row is strictly mapped to header length
+                globalData = globalData.map(row => {
+                    const normalized = [...row];
+                    while (normalized.length < headers.length) normalized.push("");
+                    return normalized.slice(0, headers.length);
+                });
+
+                initApp();
+            }
+            loader.style.display = 'none';
+        };
+        reader.readAsArrayBuffer(file);
+    });
+
+    function initApp() {
+        renderToggles();
+        renderTable(globalData);
+        document.getElementById('sidePanel').classList.add('active');
+    }
+
+    function renderToggles() {
+        const container = document.getElementById('columnToggles');
+        container.innerHTML = headers.map((h, i) => `
+            <label class="col-item">
+                <input type="checkbox" checked onchange="toggleCol(${i})">
+                ${h || `Column ${i + 1}`}
+            </label>
+        `).join('');
+    }
+
+    function renderTable(dataRows) {
+        const thead = document.getElementById('thead');
+        const tbody = document.getElementById('tbody');
+
+        // Render Headers
+        thead.innerHTML = `<tr>${headers.map((h, i) => `
+            <th class="${hiddenCols.has(i) ? 'hidden-col' : ''}">${h || `Col ${i+1}`}</th>
+        `).join('')}</tr>`;
+
+        // Render Body (capped at 200 for performance, easily expandable)
+        tbody.innerHTML = dataRows.slice(0, 200).map(row => `
+            <tr>${row.map((cell, i) => `
+                <td class="${hiddenCols.has(i) ? 'hidden-col' : ''}" title="${cell}">${cell}</td>
+            `).join('')}</tr>
+        `).join('');
+    }
+
+    function toggleCol(idx) {
+        if (hiddenCols.has(idx)) hiddenCols.delete(idx);
+        else hiddenCols.add(idx);
+        renderTable(globalData);
+    }
+
+    function togglePanel() {
+        document.getElementById('sidePanel').classList.toggle('active');
+    }
+
+    function applyFilter() {
+        const term = document.getElementById('searchBox').value.toLowerCase();
+        const filtered = globalData.filter(row => 
+            row.some(cell => String(cell).toLowerCase().includes(term))
+        );
+        renderTable(filtered);
+    }
+
+    function exportData() {
+        const ws = XLSX.utils.aoa_to_sheet([headers, ...globalData]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "RefinedData");
+        XLSX.writeFile(wb, "Exported_Grid.xlsx");
+    }
+</script>
+
+</body>
+</html>

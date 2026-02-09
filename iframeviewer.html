@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Link Batcher</title>
+    <style>
+        body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; background: #f0f2f5; overflow: hidden; }
+        
+        /* Progress Bar */
+        #progress-container { width: 100%; height: 4px; background: #333; position: fixed; top: 0; left: 0; z-index: 1000; display: none; }
+        #progress-bar { width: 0%; height: 100%; background: #00dc82; transition: width 0.4s ease; box-shadow: 0 0 10px #00dc82; }
+
+        #setup { padding: 40px; max-width: 500px; margin: auto; background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; }
+        #controls { padding: 8px 15px; background: #1a1a1a; color: white; display: none; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; gap: 10px; }
+        
+        .nav-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        
+        /* Current URL Display */
+        #current-url-display { 
+            background: #2a2a2a; border: 1px solid #444; color: #00dc82; padding: 6px 12px; 
+            border-radius: 4px; font-family: monospace; font-size: 0.85rem; overflow: hidden; 
+            text-overflow: ellipsis; white-space: nowrap; flex-grow: 1; max-width: 50%;
+        }
+
+        textarea { width: 100%; height: 150px; margin: 15px 0; border-radius: 8px; border: 1px solid #ddd; padding: 12px; box-sizing: border-box; resize: none; font-family: monospace; }
+        
+        button { cursor: pointer; padding: 6px 14px; border-radius: 4px; border: none; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
+        .btn-nav { background: #444; color: white; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-open { background: #6f42c1; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        
+        button:hover:not(:disabled) { opacity: 0.85; background: #555; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        #viewer { flex-grow: 1; border: none; width: 100%; background: white; }
+        .status-text { font-family: monospace; font-size: 0.85rem; color: #888; min-width: 60px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div id="progress-container"><div id="progress-bar"></div></div>
+
+<div id="setup">
+    <h2 style="margin:0 0 10px 0;">🔗 Link Batcher</h2>
+    <textarea id="urlInput" placeholder="https://wikipedia.org&#10;https://bing.com"></textarea>
+    <button class="btn-primary" onclick="startViewer()" style="width:100%; padding: 12px;">Launch Interface</button>
+    <p style="color:#888; font-size: 0.8rem; margin-top: 15px;">Use ← and → arrow keys to navigate</p>
+</div>
+
+<div id="controls">
+    <div class="nav-group">
+        <button id="prevBtn" class="btn-nav" onclick="navigate(-1)">←</button>
+        <span class="status-text" id="counter">0 / 0</span>
+        <button id="nextBtn" class="btn-nav" onclick="navigate(1)">→</button>
+    </div>
+
+    <div id="current-url-display">Waiting for link...</div>
+
+    <div class="nav-group">
+        <button class="btn-open" onclick="openExternal()" title="Open in new tab">↗ New Tab</button>
+        <button class="btn-danger" onclick="reset()">Exit</button>
+    </div>
+</div>
+
+<iframe 
+    id="viewer" 
+    src="about:blank"
+    sandbox="allow-forms allow-modals allow-popups allow-presentational-hints allow-scripts allow-same-origin"
+    allow="clipboard-read; clipboard-write"
+></iframe>
+
+<script>
+    let urls = [];
+    let currentIndex = 0;
+    const progressBar = document.getElementById('progress-bar');
+    const progressCont = document.getElementById('progress-container');
+    const iframe = document.getElementById('viewer');
+    const urlDisplay = document.getElementById('current-url-display');
+
+    function startViewer() {
+        const input = document.getElementById('urlInput').value.trim();
+        if (!input) return;
+
+        urls = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+        
+        if (urls.length > 0) {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('controls').style.display = 'flex';
+            progressCont.style.display = 'block';
+            updateFrame();
+        }
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (document.getElementById('controls').style.display === 'flex') {
+            if (e.key === "ArrowLeft") navigate(-1);
+            if (e.key === "ArrowRight") navigate(1);
+        }
+    });
+
+    iframe.onload = function() {
+        progressBar.style.width = "100%";
+        setTimeout(() => {
+            progressBar.style.opacity = "0";
+            setTimeout(() => {
+                progressBar.style.width = "0%";
+                progressBar.style.opacity = "1";
+            }, 300);
+        }, 400);
+    };
+
+    function navigate(direction) {
+        const newIndex = currentIndex + direction;
+        if (newIndex >= 0 && newIndex < urls.length) {
+            currentIndex = newIndex;
+            updateFrame();
+        }
+    }
+
+    function openExternal() {
+        window.open(urls[currentIndex], '_blank');
+    }
+
+    function updateFrame() {
+        progressBar.style.width = "25%"; 
+        
+        let targetUrl = urls[currentIndex];
+        if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
+        
+        iframe.src = targetUrl;
+        urlDisplay.innerText = targetUrl; // Show current link
+
+        document.getElementById('counter').innerText = `${currentIndex + 1} / ${urls.length}`;
+        document.getElementById('prevBtn').disabled = (currentIndex === 0);
+        document.getElementById('nextBtn').disabled = (currentIndex === urls.length - 1);
+    }
+
+    function reset() {
+        if(confirm("Return to start?")) location.reload();
+    }
+</script>
+
+</body>
+</html>
