@@ -1,0 +1,267 @@
+/* --- Professional Data Tool Styling --- */
+
+:root {
+    --primary: #2563eb;       /* Modern Action Blue */
+    --primary-hover: #1d4ed8;
+    --bg-main: #f8fafc;       /* Soft Light Gray */
+    --card-bg: #ffffff;
+    --text-main: #1e293b;     /* Slate 800 */
+    --text-muted: #64748b;    /* Slate 500 */
+    --border: #e2e8f0;        /* Slate 200 */
+    --success: #10b981;
+    --accent: #6366f1;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    line-height: 1.5;
+    padding: 2rem;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* --- Header Section --- */
+.header-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 1rem;
+}
+
+h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--text-main);
+}
+
+#timer-box {
+    text-align: right;
+    display: none; /* Controlled by JS */
+}
+
+.eta-main {
+    font-weight: 600;
+    color: var(--primary);
+    font-size: 0.9rem;
+}
+
+.expected-at {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+/* --- Input Card --- */
+.card {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    border: 1px solid var(--border);
+}
+
+textarea {
+    width: 100%;
+    height: 120px;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+    resize: vertical;
+    margin-bottom: 1rem;
+    transition: border-color 0.2s;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    ring: 2px solid rgba(37, 99, 235, 0.1);
+}
+
+/* --- Buttons --- */
+.controls {
+    display: flex;
+    gap: 0.75rem;
+}
+
+button {
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.5rem 1.25rem;
+    border-radius: 6px;
+    border: none;
+    transition: all 0.2s;
+}
+
+.btn-run {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-run:hover { background: var(--primary-hover); }
+.btn-run:disabled { background: var(--text-muted); opacity: 0.6; }
+
+.btn-csv {
+    background: white;
+    color: var(--text-main);
+    border: 1px solid var(--border);
+}
+
+.btn-csv:hover { background: #f1f5f9; }
+
+.btn-copy-all {
+    color: white;
+}
+
+/* --- Results Table --- */
+.table-container {
+    background: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+th {
+    background: #f1f5f9;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+}
+
+td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover { background-color: #f8fafc; }
+
+/* --- Component Utilities --- */
+.time-badge {
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: var(--text-muted);
+}
+
+
+
+.url-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Keeps button on the right */
+    gap: 12px;
+    width: 100%;
+    min-width: 200px;
+}
+
+.copy-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.btn-copy-mini {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 4px 16px;
+    font-size: 0.7rem;
+    color: var(--primary);
+}
+
+.btn-copy-mini:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.copy-toast {
+    position: absolute;
+    top: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text-main);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+.copy-toast.show { opacity: 1; }
+
+/* Fixed column widths for alignment */
+.col-npi { width: 110px; }
+.col-pwid { width: 100px; }
+.col-fetch { width: 80px; }
+
+.controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
+}
+
+
+.progress-container {
+    flex-grow: 1;
+    height: 14px; /* Slightly taller to fit text better */
+    background-color: #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+    transition: width 0.4s ease;
+}
+
+.progress-text {
+    position: absolute;
+    right: 10px; /* Keeps it at the end of the container */
+    font-size: 10px;
+    font-weight: bold;
+    color: #1e293b;
+    pointer-events: none; /* User can't accidentally click the text */
+}
