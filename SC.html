@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NPI & PWID Deep Scan</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="header-area">
+        <h2>Sharecare Extractor</h2>
+        <div id="timer-box">
+            <div id="etaDisplay" class="eta-main">ETA: --:--</div>
+            <div id="expectedTime" class="expected-at">Expected at: --:--</div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <textarea id="npiInput" placeholder="Paste NPIs (one per line)..."></textarea>
+        <div class="controls">
+    <div class="button-group">
+        <button id="runBtn" class="btn-run">Start Fetch</button>
+        <button id="csvBtn" class="btn-csv">Download CSV</button>
+        <button id="copyAllBtn" style="background: #64748b;" class="btn-copy-all">Copy</button>
+    </div>
+<div id="progressContainer" class="progress-container" style="display: none;">
+    <div id="progressBar" class="progress-bar"></div>
+    <span id="progressPercent" class="progress-text">0%</span>
+</div>
+        <div id="progressBar" class="progress-bar"></div>
+    </div>
+</div>
+    </div>
+
+    <div class="table-container">
+        <table id="resTable">
+            <thead>
+                <tr>
+                    <th class="col-npi">NPI</th>
+                    <th class="col-pwid">PWID</th>
+                    <th class="col-name">Name</th>
+                    <th class="col-spec">Specialty</th>
+                    <th class="col-loc">City,State</th>
+                    <th class="col-fetch">Speed</th>
+                    <th class="col-action">Sharecare Profile URL</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let results = [];
+
+    function copyUrl(btn, url) {
+        if (url === "N/A") return;
+        navigator.clipboard.writeText(url).then(() => {
+            const toast = btn.parentElement.querySelector('.copy-toast');
+            if (toast) {
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 1500);
+            }
+        });
+    }
+
+ async function fetchNpi(npi, retries = 3) {
+    const start = performance.now();
+    
+    for (let i = 0; i < retries; i++) {
+        try {
+            // Added a 10-second timeout signal to prevent hanging indefinitely
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+            const response = await fetch(`https://providers.sharecare.com/doctor/hg-search-api/condition-typeahead?qwhat=${npi}`, 
+                { signal: controller.signal }
+            );
+            
+            clearTimeout(timeoutId);
+
+            if (!response.ok) throw new Error('Network response was not ok');
+            
+            const data = await response.json();
+            return { data, time: Math.round(performance.now() - start) };
+            
+        } catch (e) {
+            console.warn(`Attempt ${i + 1} failed for NPI ${npi}. Retrying...`);
+            // Wait 1 second before retrying to let the network "breathe"
+            if (i < retries - 1) await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+        }
+    }
+    
+    // If all retries fail, return the error state
+    return { data: null, time: 'Err' };
+}
+
+    
+
+    document.getElementById('runBtn').onclick = async () => {
+    const overallStart = performance.now(); // Record the start time
+    const lines = document.getElementById('npiInput').value.split('\n').map(s => s.trim()).filter(s => s);
+    if (!lines.length) return;
+
+    const runBtn = document.getElementById('runBtn');
+    const timerBox = document.getElementById('timer-box');
+    const etaDisplay = document.getElementById('etaDisplay');
+    const expectedDisplay = document.getElementById('expectedTime');
+    
+    // Progress Bar Elements
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+    
+    runBtn.disabled = true;
+    timerBox.style.display = 'block';
+    progressContainer.style.display = 'flex';
+    progressBar.style.width = '0%';
+    progressPercent.innerText = '0%';
+    
+    const tbody = document.querySelector('#resTable tbody');
+    tbody.innerHTML = "";
+    results = [];
+
+    for (let i = 0; i < lines.length; i++) {
+        // Update Progress Bar
+        const percent = Math.round(((i + 1) / lines.length) * 100);
+        progressBar.style.width = `${percent}%`;
+        progressPercent.innerText = `${percent}%`;
+        progressPercent.style.color = percent > 90 ? '#ffffff' : '#1e293b';
+
+        const secondsLeft = (lines.length - i) * 2.8;
+        etaDisplay.innerText = `ETA: ${Math.floor(secondsLeft / 60)}m ${Math.ceil(secondsLeft % 60)}s left`;
+        expectedDisplay.innerText = `Expected at: ${new Date(Date.now() + secondsLeft * 1000).toLocaleTimeString()}`;
+
+        const npi = lines[i];
+        const result = await fetchNpi(npi);
+        
+        const matchCategory = result.data?.externalItems?.find(x => x.category === "Name Match");
+        const suggestion = matchCategory?.suggestions?.[0];
+
+        let pwidVal = "N/A", sharecareUrl = "N/A";
+        if (suggestion && suggestion.url) {
+            const cleanPath = suggestion.url.split('?')[0];
+            sharecareUrl = "https://providers.sharecare.com" + cleanPath;
+            const slugParts = cleanPath.split('/');
+            const slug = slugParts[slugParts.length - 1];
+            if (slug) {
+                const parts = slug.split('-');
+                pwidVal = parts[parts.length - 1];
+            }
+        }
+
+        let item = {
+            npi: npi, pwid: pwidVal, name: suggestion ? suggestion.text : "N/A",
+            spec: suggestion ? suggestion.specialty : "N/A", loc: suggestion ? suggestion.city : "N/A",
+            url: sharecareUrl, fetchTime: result.time
+        };
+
+        results.push(item);
+        const row = tbody.insertRow(0);
+        row.innerHTML = `
+            <td>${item.npi}</td>
+            <td style="font-family:monospace; color:#2563eb">${item.pwid}</td>
+            <td><strong>${item.name}</strong></td>
+            <td>${item.spec}</td>
+            <td>${item.loc}</td>
+            <td><span class="time-badge">${item.fetchTime}ms</span></td>
+            <td>
+                <div class="url-row">
+                    <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; flex-grow:1; overflow:hidden; text-overflow:ellipsis;">
+                        ${item.url}
+                    </a>
+                    <div class="copy-container">
+                        <span class="copy-toast">Copied!</span>
+                        <button class="btn-copy-mini" onclick="copyUrl(this, '${item.url}')">Copy</button>
+                    </div>
+                </div>
+            </td>
+        `;
+
+        if (i < lines.length - 1) await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+    }
+    
+     const overallEnd = performance.now();
+    const totalMs = overallEnd - overallStart;
+    const totalSeconds = Math.floor(totalMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    runBtn.disabled = false;
+    etaDisplay.innerText = "Completed"; 
+    expectedDisplay.innerText = `Time taken: ${minutes}m ${seconds}s`;
+
+    setTimeout(() => { progressContainer.style.display = 'none'; }, 3000);
+    runBtn.disabled = false;
+};
+
+    document.getElementById('csvBtn').onclick = () => {
+        if(!results.length) return;
+        const header = "NPI,PWID,Name,Specialty,Location,SharecareURL,FetchTime\n";
+        const rows = results.map(r => `"${r.npi}","${r.pwid}","${r.name}","${r.spec}","${r.loc}","${r.url}","${r.fetchTime}"`).join('\n');
+        const blob = new Blob([header + rows], { type: 'text/csv' });
+        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `Sharecare_Scan_Results.csv` });
+        a.click();
+    };
+
+    document.getElementById('copyAllBtn').onclick = () => {
+        if (!results.length) return;
+        const headers = ["NPI", "PWID", "Name", "Specialty", "Location", "Sharecare URL", "Speed (ms)"];
+        const rows = results.map(r => [r.npi, r.pwid, r.name, r.spec, r.loc, r.url, r.fetchTime].join('\t'));
+        navigator.clipboard.writeText([headers.join('\t'), ...rows].join('\n')).then(() => {
+            const btn = document.getElementById('copyAllBtn');
+            btn.innerText = "Copied!";
+            setTimeout(() => btn.innerText = "Copy", 2000);
+        });
+    };
+</script>
+</body>
+</html>

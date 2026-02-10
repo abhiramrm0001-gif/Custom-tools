@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Healthline NPI Deep Scan</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <div class="header-area">
+        <h2>Healthline Extractor</h2>
+        <div id="timer-box">
+            <div id="etaDisplay" class="eta-main">ETA: --:--</div>
+            <div id="expectedTime" class="expected-at">Expected at: --:--</div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <textarea id="npiInput" placeholder="Paste NPIs (one per line)..."></textarea>
+        <div class="controls">
+            <div class="button-group">
+                <button id="runBtn" class="btn-run">Start Fetch</button>
+                <button id="csvBtn" class="btn-csv">Download CSV</button>
+                <button id="copyAllBtn" class="btn-copy-all">Copy</button>
+            </div>
+            <div id="progressContainer" class="progress-container" style="display: none;">
+                <div id="progressBar" class="progress-bar"></div>
+                <span id="progressPercent" class="progress-text">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table id="resTable">
+            <thead>
+                <tr>
+                    <th class="col-npi">NPI</th>
+                    <th class="col-pwid">HL ID</th>
+                    <th class="col-name">Name</th>
+                    <th class="col-spec">Specialty</th>
+                    <th class="col-loc">City,State</th>
+                    <th class="col-fetch">Speed</th>
+                    <th class="col-action">Healthline URL</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let results = [];
+
+    function copyUrl(btn, url) {
+        if (url === "N/A") return;
+        navigator.clipboard.writeText(url).then(() => {
+            const toast = btn.parentElement.querySelector('.copy-toast');
+            if (toast) {
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 1500);
+            }
+        });
+    }
+
+    // --- Helper to Slugify Name for URL Construction ---
+    function constructSlug(name) {
+        if (!name) return "";
+        // 1. Remove everything after a comma (e.g. ", MD")
+        let clean = name.split(',')[0];
+        // 2. Remove dots/punctuation
+        clean = clean.replace(/[^\w\s-]/g, '');
+        // 3. Trim whitespace
+        clean = clean.trim();
+        // 4. Replace spaces with hyphens
+        clean = clean.replace(/\s+/g, '-');
+        // 5. Lowercase
+        return clean.toLowerCase();
+    }
+
+    async function fetchNpi(npi, retries = 3) {
+        const start = performance.now();
+        
+        for (let i = 0; i < retries; i++) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                // Updated to Healthline API
+                const response = await fetch(`https://care.healthline.com/find-care/hg-search-api/condition-typeahead?qwhat=${npi}`, 
+                    { signal: controller.signal }
+                );
+                
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                return { data, time: Math.round(performance.now() - start) };
+                
+            } catch (e) {
+                console.warn(`Attempt ${i + 1} failed for NPI ${npi}. Retrying...`);
+                if (i < retries - 1) await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+            }
+        }
+        return { data: null, time: 'Err' };
+    }
+
+    document.getElementById('runBtn').onclick = async () => {
+        const overallStart = performance.now();
+        const lines = document.getElementById('npiInput').value.split('\n').map(s => s.trim()).filter(s => s);
+        if (!lines.length) return;
+
+        const runBtn = document.getElementById('runBtn');
+        const timerBox = document.getElementById('timer-box');
+        const etaDisplay = document.getElementById('etaDisplay');
+        const expectedDisplay = document.getElementById('expectedTime');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercent = document.getElementById('progressPercent');
+        
+        runBtn.disabled = true;
+        timerBox.style.display = 'block';
+        progressContainer.style.display = 'flex';
+        progressBar.style.width = '0%';
+        progressPercent.innerText = '0%';
+        
+        const tbody = document.querySelector('#resTable tbody');
+        tbody.innerHTML = "";
+        results = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            // UI Updates
+            const percent = Math.round(((i + 1) / lines.length) * 100);
+            progressBar.style.width = `${percent}%`;
+            progressPercent.innerText = `${percent}%`;
+            progressPercent.style.color = percent > 60 ? '#ffffff' : '#1e293b';
+
+            const secondsLeft = (lines.length - i) * 2.5; // Adjusted est time per fetch
+            etaDisplay.innerText = `ETA: ${Math.floor(secondsLeft / 60)}m ${Math.ceil(secondsLeft % 60)}s left`;
+            expectedDisplay.innerText = `Expected at: ${new Date(Date.now() + secondsLeft * 1000).toLocaleTimeString()}`;
+
+            const npi = lines[i];
+            const result = await fetchNpi(npi);
+            
+            // --- Healthline Parsing Logic ---
+            const matchCategory = result.data?.externalItems?.find(x => x.category === "Name Match");
+            const suggestion = matchCategory?.suggestions?.[0];
+
+            let pwidVal = "N/A", finalUrl = "N/A", name = "N/A", spec = "N/A", loc = "N/A";
+
+            if (suggestion) {
+                name = suggestion.text || "N/A";
+                spec = suggestion.specialty || "N/A";
+                loc = suggestion.city || "N/A";
+
+                // Extract Healthline Internal ID (yk7fy) from the returned URL for the ID column
+                // Example URL: /find-care/provider/maria-mederos-yk7fy?referrerSource=autosuggest
+                if (suggestion.url) {
+                    const cleanPath = suggestion.url.split('?')[0];
+                    const parts = cleanPath.split('-');
+                    // The API ID is usually the last part of the slug in the returned URL
+                    pwidVal = parts[parts.length - 1]; 
+                }
+
+                // Construct Requested URL: Name-Slug + NPI
+                const slug = constructSlug(name);
+                if (slug) {
+                    finalUrl = `https://care.healthline.com/find-care/provider/${slug}-${npi}`;
+                }
+            }
+
+            let item = {
+                npi: npi, 
+                pwid: pwidVal, 
+                name: name,
+                spec: spec, 
+                loc: loc,
+                url: finalUrl, 
+                fetchTime: result.time
+            };
+
+            results.push(item);
+            
+            const row = tbody.insertRow(0);
+            row.innerHTML = `
+                <td>${item.npi}</td>
+                <td style="font-family:monospace; color:#d92d2d">${item.pwid}</td>
+                <td><strong>${item.name}</strong></td>
+                <td>${item.spec}</td>
+                <td>${item.loc}</td>
+                <td><span class="time-badge">${item.fetchTime}ms</span></td>
+                <td>
+                    <div class="url-row">
+                        <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; flex-grow:1; overflow:hidden; text-overflow:ellipsis; font-size:12px;">
+                            ${item.url}
+                        </a>
+                        <div class="copy-container">
+                            <span class="copy-toast">Copied!</span>
+                            <button class="btn-copy-mini" onclick="copyUrl(this, '${item.url}')">Copy</button>
+                        </div>
+                    </div>
+                </td>
+            `;
+
+            if (i < lines.length - 1) await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+        }
+        
+        const overallEnd = performance.now();
+        const totalMs = overallEnd - overallStart;
+        const totalSeconds = Math.floor(totalMs / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+
+        runBtn.disabled = false;
+        etaDisplay.innerText = "Completed"; 
+        expectedDisplay.innerText = `Time taken: ${minutes}m ${seconds}s`;
+
+        setTimeout(() => { progressContainer.style.display = 'none'; }, 3000);
+    };
+
+    document.getElementById('csvBtn').onclick = () => {
+        if(!results.length) return;
+        const header = "NPI,HealthlineID,Name,Specialty,Location,HealthlineURL,FetchTime\n";
+        const rows = results.map(r => `"${r.npi}","${r.pwid}","${r.name}","${r.spec}","${r.loc}","${r.url}","${r.fetchTime}"`).join('\n');
+        const blob = new Blob([header + rows], { type: 'text/csv' });
+        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `Healthline_Scan_Results.csv` });
+        a.click();
+    };
+
+    document.getElementById('copyAllBtn').onclick = () => {
+        if (!results.length) return;
+        const headers = ["NPI", "HealthlineID", "Name", "Specialty", "Location", "Healthline URL", "Speed (ms)"];
+        const rows = results.map(r => [r.npi, r.pwid, r.name, r.spec, r.loc, r.url, r.fetchTime].join('\t'));
+        navigator.clipboard.writeText([headers.join('\t'), ...rows].join('\n')).then(() => {
+            const btn = document.getElementById('copyAllBtn');
+            btn.innerText = "Copied!";
+            setTimeout(() => btn.innerText = "Copy", 2000);
+        });
+    };
+</script>
+</body>
+</html>
