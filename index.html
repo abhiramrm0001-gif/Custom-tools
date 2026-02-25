@@ -1,109 +1,356 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Web Tools</title>
-    <style>
-        /* General Page Reset and Typography */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>My Web Tools</title>
+  <style>
+    :root{
+      /* Theme */
+      --bg: #0f172a;             /* page background (slate-900) */
+      --bg-accent: #0b122a;      /* hero gradient base */
+      --surface: #0b1220;        /* card base */
+      --surface-2:#0f1a34;       /* card hover */
+      --text: #e5e7eb;           /* primary text */
+      --muted:#9aa3b2;           /* secondary text */
+      --brand:#22c55e;           /* emerald */
+      --brand-2:#10b981;         /* emerald alt */
+      --ring: rgba(34,197,94,.35);
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f7f6;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh; /* Ensures footer stays at bottom */
-        }
+      --radius: 14px;
+      --shadow-1: 0 10px 30px rgba(0,0,0,.25);
+      --shadow-2: 0 18px 40px rgba(0,0,0,.35);
+      --border: 1px solid rgba(255,255,255,.06);
+      --card-border: 1px solid rgba(255,255,255,.08);
+    }
 
-        /* Container for the main content */
-        .container {
-            width: 100%;
-            max-width: 600px;
-            margin: 60px auto; /* Centers the container */
-            padding: 20px;
-            text-align: center;
-        }
+    /* Reset */
+    *,*::before,*::after{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Segoe UI Variable", "Segoe UI Symbol", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #10311f 0%, rgba(16,49,31,0) 60%),
+        radial-gradient(800px 400px at 110% -10%, #0a3a24 0%, rgba(10,58,36,0) 55%),
+        linear-gradient(180deg, var(--bg-accent), var(--bg));
+      display:flex;
+      flex-direction:column;
+      min-height:100svh;
+    }
 
-        h1 {
-            font-size: 2.5rem;
-            color: #2c3e50;
-            margin-bottom: 30px;
-            font-weight: 600;
-            letter-spacing: -0.5px;
-        }
+    .page{
+      width:100%;
+      max-width:1200px;
+      margin:0 auto;
+      padding: clamp(16px, 2.5vw, 28px);
+      gap: clamp(20px, 3vw, 32px);
+      display:flex;
+      flex-direction:column;
+      flex:1;
+    }
 
-        /* Styling the List */
-        ul {
-            list-style-type: none; /* Removes bullet points */
-            padding: 0;
-        }
+    /* Header / Hero */
+    header{
+      position:relative;
+      padding: clamp(18px, 3.2vw, 28px);
+      border-radius: calc(var(--radius) + 2px);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border: var(--border);
+      box-shadow: var(--shadow-1);
+      overflow:hidden;
+      isolation:isolate;
+    }
+    header::before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(300px 300px at 10% 20%, rgba(34,197,94,.18), transparent 60%),
+        radial-gradient(300px 300px at 90% 10%, rgba(16,185,129,.18), transparent 60%);
+      z-index:-1;
+      filter: blur(4px);
+    }
+    .kicker{
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      padding:.35rem .7rem;
+      border-radius:999px;
+      font-size:.8rem;
+      letter-spacing:.35px;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(34,197,94,.18), rgba(34,197,94,.08));
+      border: 1px solid rgba(34,197,94,.35);
+      backdrop-filter: blur(6px);
+    }
+    .kicker-dot{
+      width:8px; height:8px; border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, #34d399, #22c55e);
+      box-shadow: 0 0 0 3px rgba(34,197,94,.2);
+    }
+    h1{
+      margin: .6rem 0 0 0;
+      font-size: clamp(1.6rem, 2.8vw, 2.4rem);
+      line-height:1.15;
+      letter-spacing:-.02em;
+      font-weight:700;
+      color: #f1f5f9;
+    }
+    .sub{
+      margin-top:.55rem;
+      color: var(--muted);
+      font-size: clamp(.95rem, 1.35vw, 1.05rem);
+    }
 
-        li {
-            margin-bottom: 15px;
-        }
+    /* Grid */
+    .tools{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: clamp(14px, 2vw, 20px);
+      align-items:stretch;
+    }
 
-        /* Styling the Links (Cards) */
-        a {
-            display: block;
-            text-decoration: none;
-            background-color: #ffffff;
-            color: #444;
-            padding: 18px 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border-left: 5px solid #3498db; /* Blue accent bar */
-            transition: all 0.3s ease; /* Smooth animation */
-            font-weight: 500;
-            font-size: 1.1rem;
-            text-align: left;
-        }
+    /* Card Links */
+    .tool-card{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      text-decoration:none;
+      color: var(--text);
+      padding:16px 16px;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border: var(--card-border);
+      box-shadow: var(--shadow-1);
+      position:relative;
+      overflow:hidden;
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .25s ease;
+      outline: none;
+    }
+    .tool-card::before{
+      content:"";
+      position:absolute; inset:0;
+      background:
+        linear-gradient(90deg, rgba(34,197,94,.09), transparent 45%);
+      opacity:.9;
+      pointer-events:none;
+    }
+    .tool-card:hover{
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-2);
+      border-color: rgba(34,197,94,.45);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+    }
+    .tool-card:focus-visible{
+      box-shadow: 0 0 0 4px var(--ring), var(--shadow-2);
+      border-color: rgba(34,197,94,.65);
+    }
 
-        /* Hover Effects */
-        a:hover {
-            background-color: #3498db;
-            color: #ffffff;
-            transform: translateY(-3px); /* Lifts the card up slightly */
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
-        }
+    .icon-wrap{
+      flex:0 0 auto;
+      width:42px; height:42px;
+      border-radius:12px;
+      display:grid; place-items:center;
+      background:
+        linear-gradient(180deg, rgba(34,197,94,.15), rgba(34,197,94,.05));
+      border: 1px solid rgba(34,197,94,.35);
+    }
+    .icon{
+      width:20px; height:20px; display:block;
+      fill: url(#g) #22c55e;
+      color: #22c55e;
+    }
+    .label{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; width:100%;
+    }
+    .title{
+      font-size: 1rem; line-height:1.25; font-weight:600; color:#f3f4f6;
+      letter-spacing:.2px;
+    }
+    .chev{
+      flex:0 0 auto;
+      width:18px; height:18px; opacity:.7;
+      transform: translateX(0);
+      transition: transform .18s ease, opacity .18s ease;
+    }
+    .tool-card:hover .chev{ transform: translateX(3px); opacity:.95; }
 
-        /* Footer Styling */
-        footer {
-            margin-top: auto; /* Pushes footer to the bottom */
-            padding: 20px;
-            text-align: center;
-            background-color: #2c3e50;
-            color: #ecf0f1;
-            font-size: 0.9rem;
-        }
-    </style>
+    /* Footer */
+    footer{
+      margin-top:auto;
+      padding:18px;
+      text-align:center;
+      color: var(--muted);
+      font-size:.92rem;
+    }
+    .foot-border{
+      max-width:1200px;
+      margin:0 auto;
+      border-top: 1px solid rgba(255,255,255,.06);
+      padding-top:14px;
+    }
+
+    /* Better tap targets on small screens */
+    @media (max-width: 480px){
+      .tool-card{ padding:14px 14px; }
+      .icon-wrap{ width:38px; height:38px; border-radius:10px; }
+      .title{ font-size:.98rem; }
+    }
+  </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>My Web Tools</h1>
-        <ul>
-            <li><a href="HG.html">Fetch Healthgrades with NPI list</a></li>
-            <li><a href="SC.html">Fetch Sharecare with NPI list</a></li>
-            <li><a href="HL.html">Fetch Healthline with NPI list (Possible redirection)</a></li>
-            <li><a href="MNT.html">Fetch Medical News Today with NPI list (Possible redirection)</a></li>
-            <li><a href="folder_import.html">Folder Import </a></li>
-            <li><a href="iframeviewer.html">Iframe Viewer</a></li>
-            <li><a href="linkopener3.0.html">Link Opener 3.0</a></li>
-            <li><a href="location search.html">Location Search</a></li>
-            <li><a href="Provider search.html">Provider Search</a></li>
-            <li><a href="bing search.html">bing search </a></li>
-        </ul>
-    </div>
+  <main class="page">
+    <header aria-label="Page header">
+      <span class="kicker">
+        <span class="kicker-dot" aria-hidden="true"></span>
+        Quick Access · Tools
+      </span>
+      <h1>My Web Tools</h1>
+      <p class="sub">A clean, modern launchpad for your daily verification and research utilities.</p>
+    </header>
 
-    <footer>
-        Abhiram &copy;
-    </footer>
+    <section aria-label="Tools" class="tools">
 
+      <a class="tool-card" href="HG.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <!-- link icon -->
+          <svg class="icon" viewBox="0 0 24 24">
+            <defs>
+              <linearGradient id="g" x1="0" x2="1">
+                <stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#22c55e"/>
+              </linearGradient>
+            </defs>
+            <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3ZM5 5h6v2H7v10h10v-4h2v6H5V5Z"/>
+          </svg>
+        </span>
+        <span class="label">
+          <span class="title">Fetch Healthgrades with NPI list</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="SC.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#circle-link"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">Fetch Sharecare with NPI list</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="HL.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 1 18 0A9 9 0 0 1 3 12Zm10-5v4h4v2h-4v4h-2v-4H7v-2h4V7h2Z"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">Fetch Healthline with NPI list (Possible redirection)</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="MNT.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Zm0 9L2 6v11l10 5 10-5V6l-10 5Z"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">Fetch Medical News Today with NPI list (Possible redirection)</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="folder_import.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M10 4l2 2h8a2 2 0 0 1 2 2v1H4V6a2 2 0 0 1 2-2h4Zm12 6H2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8Z"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">Folder Import</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="iframeviewer.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 5h16v14H4V5Zm2 2v10h12V7H6Z"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">Iframe Viewer</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="linkopener3.0.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a5 5 0 0 1 5-5h4v2H8a3 3 0 1 0 0 6h4v2H8a5 5 0 0 1-5-5Zm8-3h5a5 5 0 0 1 0 10h-5v-2h5a3 3 0 1 0 0-6h-5V9Z"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">Link Opener 3.0</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="location search.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 1 7 7c0 5.25-7 13-7 13S5 14.25 5 9a7 7 0 0 1 7-7Zm0 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">Location Search</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="Provider search.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5Z"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">Provider Search</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="bing search.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M5 3v13.5L13.5 21l5.5-3-6.5-2.5V6.2L8 4.5 5 3Z"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">bing search</span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+      <a class="tool-card" href="yelp_search_from_NPI.html">
+        <span class="icon-wrap" aria-hidden="true">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/></svg>
+        </span>
+        <span class="label">
+          <span class="title">yelp search from_NPIh </span>
+          <svg class="chev" viewBox="0 0 24 24" fill="currentColor"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
+        </span>
+      </a>
+
+    </section>
+  </main>
+
+  <footer>
+    <div class="foot-border">Abhiram &copy;</div>
+  </footer>
+
+  <!-- (Optional) SVG symbol reference (not required for rendering but left for extensibility)
+  <svg width="0" height="0" style="position:absolute">
+    <symbol id="circle-link" viewBox="0 0 24 24">
+      <path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm3.54 5.46 1.41 1.41-6.36 6.36-1.41-1.41 6.36-6.36Z"/>
+    </symbol>
+  </svg>
+  -->
 </body>
 </html>
