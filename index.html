@@ -19,10 +19,13 @@
       --brand-2: #3b82f6;      /* blue-500 */
       --ring: rgba(59, 130, 246, .38);
 
+      --card-height: 92px;
+
       --shadow-1: 0 10px 30px rgba(0, 0, 0, .10);
       --shadow-2: 0 18px 40px rgba(0, 0, 0, .18);
       --trans-fast: .18s cubic-bezier(.2,.6,.2,1);
       --trans-med: .25s cubic-bezier(.2,.6,.2,1);
+      --theme-anim: 420ms cubic-bezier(.2,.6,.2,1);
     }
 
     /* Light Theme (default) */
@@ -73,7 +76,18 @@
       display: flex;
       flex-direction: column;
       min-height: 100svh;
-      transition: background-color var(--trans-med), color var(--trans-med);
+      transition:
+        background-color var(--trans-med),
+        color var(--trans-med);
+    }
+
+    /* Smoothen color transitions on theme change */
+    header, .kicker, .theme-toggle, a.tool-card, .icon-wrap, .chev, .title, footer, .foot-border {
+      transition:
+        background-color var(--trans-med),
+        color var(--trans-med),
+        border-color var(--trans-med),
+        box-shadow var(--trans-fast);
     }
 
     .page {
@@ -109,6 +123,7 @@
         radial-gradient(320px 320px at 88% 12%, var(--hero-grad-2), transparent 60%);
       z-index: -1;
       filter: blur(4px);
+      transition: opacity var(--trans-med);
     }
 
     .header-row {
@@ -173,7 +188,7 @@
       gap: 8px;
       cursor: pointer;
       box-shadow: var(--shadow-1);
-      transition: transform var(--trans-fast), box-shadow var(--trans-fast), background var(--trans-med), color var(--trans-med), border-color var(--trans-med);
+      transition: transform var(--trans-fast), box-shadow var(--trans-fast);
     }
     .theme-toggle:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
     .theme-toggle:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring), var(--shadow-2); }
@@ -196,7 +211,7 @@
       gap: 14px;
       text-decoration: none;
       color: var(--text);
-      padding: 16px 16px;
+      padding: 16px;
       border-radius: var(--radius);
       background:
         linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
@@ -204,9 +219,17 @@
       box-shadow: var(--shadow-1);
       position: relative;
       overflow: hidden;
-      transition: transform var(--trans-fast), box-shadow var(--trans-fast), border-color var(--trans-fast), background var(--trans-med), color var(--trans-med);
       outline: none;
-      min-height: 68px; /* comfortable tap target */
+
+      /* === Uniform Height for All Cards === */
+      height: var(--card-height);
+
+      transition:
+        transform var(--trans-fast),
+        box-shadow var(--trans-fast),
+        border-color var(--trans-fast),
+        background var(--trans-med),
+        color var(--trans-med);
     }
     a.tool-card::before {
       content: "";
@@ -214,6 +237,7 @@
       background: linear-gradient(90deg, var(--card-grad-1), transparent 45%);
       opacity: .9;
       pointer-events: none;
+      transition: opacity var(--trans-fast);
     }
     a.tool-card:hover {
       transform: translateY(-3px);
@@ -242,10 +266,12 @@
     .label {
       display: flex; align-items: center; justify-content: space-between;
       gap: 10px; width: 100%;
+      min-width: 0; /* allow ellipsis */
     }
     .title {
       font-size: 1rem; line-height: 1.25; font-weight: 600;
       letter-spacing: .2px; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* keep uniform height */
     }
     .chev {
       flex: 0 0 auto; width: 18px; height: 18px; opacity: .7;
@@ -284,6 +310,26 @@
       .title { font-size: .98rem; }
     }
 
+    /* -----------------------------
+       Fallback Theme Transition Overlay
+       ----------------------------- */
+    body.theme-transition::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(160vmax 160vmax at var(--theme-x, 50%) var(--theme-y, 50%),
+          rgba(59,130,246,.28), transparent 60%),
+        rgba(0,0,0,.06);
+      mix-blend-mode: normal;
+      animation: themeFade var(--theme-anim) ease both;
+    }
+    @keyframes themeFade {
+      from { opacity: 1; }
+      to   { opacity: 0; }
+    }
+
     /* Respect reduced motion */
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; animation: none !important; }
@@ -301,9 +347,9 @@
 
         <div class="actions">
           <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
-            <!-- Sun/Moon swap via JS -->
             <svg id="themeIcon" class="toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6.76 4.84 5.34 3.42 3.92 4.84l1.42 1.42 1.42-1.42Zm10.48 14.32-1.42-1.42-1.42 1.42 1.42 1.42 1.42-1.42ZM12 4V2h-0v2h0Zm0 20v-2h0v2h0ZM4 12H2v0h2v0Zm20 0h-2v0h2v0ZM6.76 19.16l-1.42 1.42 1.42 1.42 1.42-1.42-1.42-1.42ZM19.16 6.76l1.42-1.42-1.42-1.42-1.42 1.42 1.42 1.42ZM12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
+              <!-- Sun icon (default) -->
+              <path d="M6.76 4.84 5.34 3.42 3.92 4.84l1.42 1.42 1.42-1.42ZM12 4V2h0v2h0Zm10 8h2v0h-2v0ZM4 12H2v0h2v0Zm1.34 7.76 1.42-1.42-1.42-1.42-1.42 1.42 1.42 1.42ZM12 22v-2h0v2h0Zm7.76-5.34-1.42-1.42-1.42 1.42 1.42 1.42 1.42-1.42ZM12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
             </svg>
             <span id="themeLabel" class="toggle-label">Light</span>
           </button>
@@ -316,7 +362,7 @@
 
     <section aria-label="Tools" class="tools">
       <!-- Healthgrades -->
-      <a href="HG.html" class="tool-card" aria-label="Fetch Healthgrades with NPI list">
+      <a class="tool-card" href="HG.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3ZM5 5h6v2H7v10h10v-4h2v6H5V5Z"/>
@@ -329,7 +375,7 @@
       </a>
 
       <!-- Sharecare -->
-      <a href="SC.html" class="tool-card" aria-label="Fetch Sharecare with NPI list">
+      <a class="tool-card" href="SC.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm3 7-6 6-2-2 1.41-1.41L9 12.17l4.59-4.58L15 9Z"/>
@@ -342,7 +388,7 @@
       </a>
 
       <!-- Healthline -->
-      <a href="HL.html" class="tool-card" aria-label="Fetch Healthline with NPI list (Possible redirection)">
+      <a class="tool-card" href="HL.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M3 12a9 9 0 1 1 18 0A9 9 0 0 1 3 12Zm10-5v4h4v2h-4v4h-2v-4H7v-2h4V7h2Z"/>
@@ -355,7 +401,7 @@
       </a>
 
       <!-- Medical News Today -->
-      <a href="MNT.html" class="tool-card" aria-label="Fetch Medical News Today with NPI list (Possible redirection)">
+      <a class="tool-card" href="MNT.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M12 2 2 7l10 5 10-5-10-5Zm0 9L2 6v11l10 5 10-5V6l-10 5Z"/>
@@ -368,7 +414,7 @@
       </a>
 
       <!-- Folder Import -->
-      <a href="folder_import.html" class="tool-card" aria-label="Folder Import">
+      <a class="tool-card" href="folder_import.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M10 4l2 2h8a2 2 0 0 1 2 2v1H4V6a2 2 0 0 1 2-2h4Zm12 6H2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8Z"/>
@@ -381,7 +427,7 @@
       </a>
 
       <!-- Iframe Viewer -->
-      <a href="iframeviewer.html" class="tool-card" aria-label="Iframe Viewer">
+      <a class="tool-card" href="iframeviewer.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M4 5h16v14H4V5Zm2 2v10h12V7H6Z"/>
@@ -394,7 +440,7 @@
       </a>
 
       <!-- Link Opener 3.0 -->
-      <a href="linkopener3.0.html" class="tool-card" aria-label="Link Opener 3.0">
+      <a class="tool-card" href="linkopener3.0.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M3 12a5 5 0 0 1 5-5h4v2H8a3 3 0 1 0 0 6h4v2H8a5 5 0 0 1-5-5Zm8-3h5a5 5 0 0 1 0 10h-5v-2h5a3 3 0 1 0 0-6h-5V9Z"/>
@@ -407,7 +453,7 @@
       </a>
 
       <!-- Location Search -->
-      <a href="location search.html" class="tool-card" aria-label="Location Search">
+      <a class="tool-card" href="location search.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M12 2a7 7 0 0 1 7 7c0 5.25-7 13-7 13S5 14.25 5 9a7 7 0 0 1 7-7Zm0 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
@@ -420,7 +466,7 @@
       </a>
 
       <!-- Provider Search -->
-      <a href="Provider search.html" class="tool-card" aria-label="Provider Search">
+      <a class="tool-card" href="Provider search.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5Z"/>
@@ -433,27 +479,27 @@
       </a>
 
       <!-- Bing Search -->
-      <a href="bing search.html" class="tool-card" aria-label="bing search">
+      <a class="tool-card" href="bing search.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M5 3v13.5L13.5 21l5.5-3-6.5-2.5V6.2L8 4.5 5 3Z"/>
           </svg>
         </span>
         <span class="label">
-          <span class="title">bing search</span>
+          <span class="title">Bing Search</span>
           <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
         </span>
       </a>
 
       <!-- Yelp Search from NPI -->
-      <a href="yelp_search_from_NPI.html" class="tool-card" aria-label="yelp search from NPI">
+      <a class="tool-card" href="yelp_search_from_NPI.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>
           </svg>
         </span>
         <span class="label">
-          <span class="title">yelp search from NPI</span>
+          <span class="title">Yelp Search from NPI</span>
           <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
         </span>
       </a>
@@ -465,20 +511,46 @@
   </footer>
 
   <script>
-    // Theme persistence + OS preference
-    (function() {
+    // Theme persistence. Default is LIGHT. If a saved preference exists, we respect it.
+    (function () {
       const body = document.body;
       const toggleBtn = document.getElementById('themeToggle');
       const icon = document.getElementById('themeIcon');
       const label = document.getElementById('themeLabel');
 
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       const saved = localStorage.getItem('theme'); // 'light' | 'dark' | null
+      const initial = saved || 'light'; // default LIGHT regardless of OS
+      setTheme(initial, false);
 
-      function setTheme(theme) {
-        body.setAttribute('data-theme', theme);
-        localStorage.setItem('theme', theme);
-        updateToggleVisual(theme);
+      function setTheme(theme, animate = true, origin = { x: null, y: null }) {
+        // Progressive enhancement: View Transition API if supported
+        const apply = () => {
+          body.setAttribute('data-theme', theme);
+          localStorage.setItem('theme', theme);
+          updateToggleVisual(theme);
+        };
+
+        if (animate) {
+          // Store click position for radial fallback
+          if (origin.x != null && origin.y != null) {
+            body.style.setProperty('--theme-x', origin.x + 'px');
+            body.style.setProperty('--theme-y', origin.y + 'px');
+          } else {
+            body.style.removeProperty('--theme-x');
+            body.style.removeProperty('--theme-y');
+          }
+
+          if (document.startViewTransition) {
+            document.startViewTransition(apply);
+          } else {
+            // Fallback: add a fading overlay
+            body.classList.add('theme-transition');
+            apply();
+            setTimeout(() => body.classList.remove('theme-transition'), 450);
+          }
+        } else {
+          apply();
+        }
       }
 
       function updateToggleVisual(theme) {
@@ -493,12 +565,14 @@
         }
       }
 
-      const initial = saved || (prefersDark ? 'dark' : 'light');
-      setTheme(initial);
-
-      toggleBtn.addEventListener('click', () => {
+      toggleBtn.addEventListener('click', (e) => {
         const next = body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        setTheme(next);
+        const rect = e.currentTarget.getBoundingClientRect();
+        const origin = {
+          x: Math.round(rect.left + rect.width / 2),
+          y: Math.round(rect.top + rect.height / 2)
+        };
+        setTheme(next, true, origin);
       });
     })();
   </script>
