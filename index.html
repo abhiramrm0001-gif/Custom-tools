@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>My Web Tools</title>
   <style>
     /* -----------------------------
@@ -29,7 +26,8 @@
     }
 
     /* Light Theme (default) */
-    body[data-theme="light"] {
+    body[data-theme="light"],
+    body[data-theme="light-square"] {
       --bg: #f6f8fb;
       --bg-hero: #eef3ff;
       --surface: #ffffff;
@@ -45,7 +43,8 @@
     }
 
     /* Dark Theme */
-    body[data-theme="dark"] {
+    body[data-theme="dark"],
+    body[data-theme="dark-square"] {
       --bg: #0b1220;     /* near-navy */
       --bg-hero: #0f172a;
       --surface: #0f172a;
@@ -58,6 +57,15 @@
       --card-grad-2: rgba(59,130,246,.06);
       --hero-grad-1: rgba(37,99,235,.18);
       --hero-grad-2: rgba(59,130,246,.10);
+    }
+
+    /* ---------------------------------------
+       SQUARE THEMES (Overrides border radius)
+       --------------------------------------- */
+    body[data-theme="light-square"],
+    body[data-theme="dark-square"] {
+      --radius: 0px;
+      --radius-sm: 0px;
     }
 
     /* -----------------------------
@@ -87,6 +95,7 @@
         background-color var(--trans-med),
         color var(--trans-med),
         border-color var(--trans-med),
+        border-radius var(--trans-fast),
         box-shadow var(--trans-fast);
     }
 
@@ -148,6 +157,12 @@
       backdrop-filter: blur(6px);
       white-space: nowrap;
     }
+    /* Square theme override for kicker */
+    body[data-theme="light-square"] .kicker,
+    body[data-theme="dark-square"] .kicker {
+      border-radius: var(--radius);
+    }
+
     .kicker-dot {
       width: 8px; height: 8px; border-radius: 50%;
       background: radial-gradient(circle at 30% 30%, var(--brand-2), var(--brand));
@@ -188,8 +203,15 @@
       gap: 8px;
       cursor: pointer;
       box-shadow: var(--shadow-1);
-      transition: transform var(--trans-fast), box-shadow var(--trans-fast);
+      transition: transform var(--trans-fast), box-shadow var(--trans-fast), border-radius var(--trans-fast);
     }
+    
+    /* Square theme override for toggle */
+    body[data-theme="light-square"] .theme-toggle,
+    body[data-theme="dark-square"] .theme-toggle {
+      border-radius: var(--radius);
+    }
+
     .theme-toggle:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
     .theme-toggle:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring), var(--shadow-2); }
     .toggle-icon { width: 18px; height: 18px; display: block; }
@@ -220,8 +242,6 @@
       position: relative;
       overflow: hidden;
       outline: none;
-
-      /* === Uniform Height for All Cards === */
       height: var(--card-height);
 
       transition:
@@ -229,6 +249,7 @@
         box-shadow var(--trans-fast),
         border-color var(--trans-fast),
         background var(--trans-med),
+        border-radius var(--trans-fast),
         color var(--trans-med);
     }
     a.tool-card::before {
@@ -257,6 +278,7 @@
       display: grid; place-items: center;
       background: linear-gradient(180deg, var(--card-grad-1), var(--card-grad-2));
       border: 1px solid rgba(59,130,246,.35);
+      transition: border-radius var(--trans-fast);
     }
     .icon {
       width: 20px; height: 20px; display: block;
@@ -266,12 +288,12 @@
     .label {
       display: flex; align-items: center; justify-content: space-between;
       gap: 10px; width: 100%;
-      min-width: 0; /* allow ellipsis */
+      min-width: 0; 
     }
     .title {
       font-size: 1rem; line-height: 1.25; font-weight: 600;
       letter-spacing: .2px; color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* keep uniform height */
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
     }
     .chev {
       flex: 0 0 auto; width: 18px; height: 18px; opacity: .7;
@@ -306,7 +328,7 @@
       .header-row { align-items: center; }
       .actions { width: 100%; justify-content: flex-end; }
       a.tool-card { padding: 14px; }
-      .icon-wrap { width: 38px; height: 38px; border-radius: 10px; }
+      .icon-wrap { width: 38px; height: 38px; }
       .title { font-size: .98rem; }
     }
 
@@ -334,14 +356,6 @@
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; animation: none !important; }
     }
-
-    /* ---------------------------------------
-       EXTRA THEME: Square Cards (light/dark)
-       --------------------------------------- */
-    body[data-theme="light-square"] a.tool-card,
-    body[data-theme="dark-square"] a.tool-card {
-      border-radius: 0; /* square cards only */
-    }
   </style>
 </head>
 <body data-theme="light">
@@ -356,7 +370,6 @@
         <div class="actions">
           <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
             <svg id="themeIcon" class="toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <!-- Sun icon (default) -->
               <path d="M6.76 4.84 5.34 3.42 3.92 4.84l1.42 1.42 1.42-1.42ZM12 4V2h0v2h0Zm10 8h2v0h-2v0ZM4 12H2v0h2v0Zm1.34 7.76 1.42-1.42-1.42-1.42-1.42 1.42 1.42 1.42ZM12 22v-2h0v2h0Zm7.76-5.34-1.42-1.42-1.42 1.42 1.42 1.42 1.42-1.42ZM12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
             </svg>
             <span id="themeLabel" class="toggle-label">Light</span>
@@ -369,7 +382,6 @@
     </header>
 
     <section aria-label="Tools" class="tools">
-      <!-- Healthgrades -->
       <a class="tool-card" href="HG.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -382,7 +394,6 @@
         </span>
       </a>
 
-      <!-- Sharecare -->
       <a class="tool-card" href="SC.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -395,7 +406,6 @@
         </span>
       </a>
 
-      <!-- Healthline -->
       <a class="tool-card" href="HL.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -408,7 +418,6 @@
         </span>
       </a>
 
-      <!-- Medical News Today -->
       <a class="tool-card" href="MNT.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -421,7 +430,6 @@
         </span>
       </a>
 
-      <!-- Folder Import -->
       <a class="tool-card" href="folder_import.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -434,7 +442,6 @@
         </span>
       </a>
 
-      <!-- Iframe Viewer -->
       <a class="tool-card" href="iframeviewer.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -447,7 +454,6 @@
         </span>
       </a>
 
-      <!-- Link Opener 3.0 -->
       <a class="tool-card" href="linkopener3.0.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -460,7 +466,6 @@
         </span>
       </a>
 
-      <!-- Location Search -->
       <a class="tool-card" href="location search.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -473,7 +478,6 @@
         </span>
       </a>
 
-      <!-- Provider Search -->
       <a class="tool-card" href="Provider search.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -486,7 +490,6 @@
         </span>
       </a>
 
-      <!-- Bing Search -->
       <a class="tool-card" href="bing search.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -499,7 +502,6 @@
         </span>
       </a>
 
-      <!-- Yelp Search from NPI -->
       <a class="tool-card" href="yelp_search_from_NPI.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
@@ -511,24 +513,20 @@
           <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
         </span>
       </a>
-    </section>
 
-      <!-- Yelp Search from NPI -->
-      <a class="tool-card" href="Fech HG SC MNT HL.html">
+      <a class="tool-card" href="all4.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>
           </svg>
         </span>
         <span class="label">
-          <span class="title">Fech HG SC MNT HL </span>
+          <span class="title">Fetch HG SC MNT HL </span>
           <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
         </span>
       </a>
-    </section>
 
-      <!-- FS search -->
-      <a class="tool-card" href="fs.html">
+      <a class="tool-card" href="FS.html">
         <span class="icon-wrap" aria-hidden="true">
           <svg class="icon" viewBox="0 0 24 24">
             <path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>
