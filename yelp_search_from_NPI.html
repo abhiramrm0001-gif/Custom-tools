@@ -52,17 +52,17 @@
         .yelp-link { color: #0073bb; text-decoration: none; font-weight: bold; }
         .error-row { color: #d63031; font-style: italic; }
 
-/* Style for links already in browser history */
-.yelp-link:visited {
-    color: #8e44ad; /* Muted purple to show it's been visited */
-}
+        /* Style for links already in browser history */
+        .yelp-link:visited {
+            color: #8e44ad; /* Muted purple to show it's been visited */
+        }
 
-/* Style for immediate feedback when clicked */
-.yelp-link.clicked {
-    color: #b2bec3;
-    text-decoration: line-through;
-    opacity: 0.7;
-} 	
+        /* Style for immediate feedback when clicked */
+        .yelp-link.clicked {
+            color: #b2bec3;
+            text-decoration: line-through;
+            opacity: 0.7;
+        }     
     </style>
 </head>
 <body>
@@ -104,9 +104,60 @@
     <script>
         let results = [];
 
+        // --- HARDENED FETCH: tries direct, then multiple CORS proxies ---
+        async function getNPIData(npi) {
+            const base = `https://npiregistry.cms.hhs.gov/api/?version=2.1&number=${encodeURIComponent(npi)}`;
+            const endpoints = [
+                // Try direct first (works if NPI API allows CORS in your context)
+                base,
+                // Proxies: note the target URL is NOT URL-encoded for these two
+                `https://corsproxy.io/?${base}`,
+                `https://cors.isomorphic-git.org/${base}`,
+                // AllOrigins returns raw body: parse JSON from text
+                `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`
+            ];
+
+            for (const url of endpoints) {
+                try {
+                    const res = await fetch(url, { method: 'GET' });
+                    if (!res.ok) continue;
+
+                    // Content-type may be missing via some proxies; fall back to text->JSON
+                    const ct = (res.headers.get('content-type') || '').toLowerCase();
+                    let data;
+                    if (ct.includes('application/json')) {
+                        data = await res.json();
+                    } else {
+                        const txt = await res.text();
+                        try { data = JSON.parse(txt); } catch { data = null; }
+                    }
+                    if (data && (data.results || data.Errors)) return data;
+                } catch (e) {
+                    // try next endpoint
+                }
+            }
+            throw new Error('All CORS endpoints failed');
+        }
+
+        function selectBestAddress(addresses = []) {
+            // Prefer LOCATION purpose; fallback to first address
+            return addresses.find(a => a.address_purpose === 'LOCATION') || addresses[0] || null;
+        }
+
+        function makeDisplayName(basic = {}) {
+            const first = (basic.first_name || '').trim();
+            const last = (basic.last_name || '').trim();
+            const org = (basic.organization_name || '').trim();
+            const name = (first || last) ? `${first} ${last}`.trim() : org;
+            return name || 'Unknown';
+        }
+
         async function processNPIs() {
             const input = document.getElementById('npiInput').value;
-            const npis = input.split('\n').map(n => n.trim()).filter(n => n);
+            const npis = input.split('\n')
+                              .map(n => n.trim())
+                              .filter(n => n);
+
             if (npis.length === 0) return alert("Enter at least one NPI.");
 
             // Reset UI
@@ -128,20 +179,22 @@
             for (let i = 0; i < npis.length; i++) {
                 const npi = npis[i];
                 let rowData = { npi, name: 'Loading...', loc: '--', url: null };
-                
+
                 try {
-                    const apiUrl = encodeURIComponent(`https://npiregistry.cms.hhs.gov/api/?version=2.1&number=${npi}`);
-                    const response = await fetch(`https://corsproxy.io/?${apiUrl}`);
-                    const data = await response.json();
+                    const data = await getNPIData(npi);
 
                     if (data.results && data.results.length > 0) {
                         const p = data.results[0];
-                        const name = p.basic.first_name ? `${p.basic.first_name} ${p.basic.last_name}` : p.basic.organization_name;
-                        const city = p.addresses[0]?.city || '';
-                        const state = p.addresses[0]?.state || '';
-                        const loc = `${city}, ${state}`;
-                        const url = `https://www.yelp.com/search?find_desc=${encodeURIComponent(name)}&find_loc=${encodeURIComponent(loc)}`;
-                        rowData = { npi, name, loc, url };
+                        const name = makeDisplayName(p.basic || {});
+                        const addr = selectBestAddress(p.addresses || []);
+                        const city = (addr && addr.city) ? addr.city : '';
+                        const state = (addr && addr.state) ? addr.state : '';
+                        const loc = [city, state].filter(Boolean).join(', ');
+                        const url = (name && loc)
+                            ? `https://www.yelp.com/search?find_desc=${encodeURIComponent(name)}&find_loc=${encodeURIComponent(loc)}`
+                            : null;
+
+                        rowData = { npi, name, loc: loc || 'N/A', url };
                     } else {
                         rowData = { npi, name: 'Not Found', loc: 'N/A', url: null };
                     }
@@ -152,6 +205,9 @@
                 results.push(rowData);
                 updateRow(rowData);
                 updateProgress(i + 1, npis.length, startTime);
+
+                // Small delay to avoid hammering endpoints (optional but safer)
+                await new Promise(r => setTimeout(r, 120));
             }
 
             genBtn.disabled = false;
@@ -160,25 +216,26 @@
         }
 
         function updateRow(data) {
-    const tbody = document.getElementById('tableBody');
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td>${data.npi}</td>
-        <td>${data.name}</td>
-        <td>${data.loc}</td>
-        <td>
-            ${data.url ? 
-                `<a href="${data.url}" 
-                    target="_blank" 
-                    class="yelp-link" 
-                    onclick="this.classList.add('clicked')">
-                    View on Yelp ↗
-                 </a>` 
-                : '<span class="error-row">N/A</span>'}
-        </td>
-    `;
-    tbody.appendChild(row);
-}
+            const tbody = document.getElementById('tableBody');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${data.npi}</td>
+                <td>${data.name}</td>
+                <td>${data.loc}</td>
+                <td>
+                    ${data.url ? 
+                        `<a href="${data.url}" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            class="yelp-link" 
+                            onclick="this.classList.add('clicked')">
+                            View on Yelp ↗
+                         </a>` 
+                        : '<span class="error-row">N/A</span>'}
+                </td>
+            `;
+            tbody.appendChild(row);
+        }
 
         function updateProgress(current, total, startTime) {
             const percent = Math.round((current / total) * 100);
@@ -199,13 +256,17 @@
 
         function copyLinks() {
             const list = results.filter(r => r.url).map(r => r.url).join('\n');
-            navigator.clipboard.writeText(list).then(() => alert("All URLs copied!"));
+            navigator.clipboard.writeText(list)
+                .then(() => alert("All URLs copied!"))
+                .catch(() => alert("Copy failed. Your browser may require HTTPS. Export CSV instead."));
         }
 
         function exportCSV() {
             let csv = "NPI,Name,Location,YelpURL\n";
             results.forEach(r => {
-                csv += `${r.npi},"${r.name}","${r.loc}",${r.url || 'N/A'}\n`;
+                const safeName = (r.name || '').replace(/"/g, '""');
+                const safeLoc  = (r.loc || '').replace(/"/g, '""');
+                csv += `${r.npi},"${safeName}","${safeLoc}",${r.url || 'N/A'}\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
@@ -213,6 +274,7 @@
             a.setAttribute('href', url);
             a.setAttribute('download', 'npi_batch_export.csv');
             a.click();
+            window.URL.revokeObjectURL(url);
         }
     </script>
 </body>
