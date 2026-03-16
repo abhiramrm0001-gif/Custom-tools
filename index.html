@@ -6,66 +6,55 @@
   <title>My Web Tools</title>
   <style>
     /* -----------------------------
-       Design Tokens (Light/Dark)
+       Design Tokens: Aurora Glass
        ----------------------------- */
     :root {
-      --radius: 14px;
+      --radius: 16px;
       --radius-sm: 12px;
-
-      --brand: #2563eb;        /* blue-600 */
-      --brand-2: #3b82f6;      /* blue-500 */
-      --ring: rgba(59, 130, 246, .38);
-
-      --card-height: 92px;
-
-      --shadow-1: 0 10px 30px rgba(0, 0, 0, .10);
-      --shadow-2: 0 18px 40px rgba(0, 0, 0, .18);
-      --trans-fast: .18s cubic-bezier(.2,.6,.2,1);
-      --trans-med: .25s cubic-bezier(.2,.6,.2,1);
-      --theme-anim: 420ms cubic-bezier(.2,.6,.2,1);
+      --card-height: 96px;
+      
+      --trans-fast: 0.2s ease-out;
+      --trans-med: 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
-    /* Light Theme (default) */
-    body[data-theme="light"],
-    body[data-theme="light-square"] {
-      --bg: #f6f8fb;
-      --bg-hero: #eef3ff;
-      --surface: #ffffff;
-      --surface-2: #f9fbff;
-      --text: #0f172a;   /* slate-900 */
-      --muted: #475569;  /* slate-600 */
-      --border: 1px solid rgba(15, 23, 42, .08);
-      --card-border: 1px solid rgba(15, 23, 42, .08);
-      --card-grad-1: rgba(59,130,246,.10);
-      --card-grad-2: rgba(59,130,246,.04);
-      --hero-grad-1: rgba(37,99,235,.10);
-      --hero-grad-2: rgba(59,130,246,.08);
+    /* Midnight Aurora (Dark Mode) */
+    body[data-theme="midnight"] {
+      --bg: #05050a;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      
+      /* Accent Colors */
+      --brand-1: #c084fc; /* Neon Purple */
+      --brand-2: #22d3ee; /* Neon Cyan */
+      
+      /* Glass Surfaces */
+      --glass-bg: rgba(255, 255, 255, 0.03);
+      --glass-hover: rgba(255, 255, 255, 0.08);
+      --glass-border: rgba(255, 255, 255, 0.08);
+      --glass-border-hover: rgba(192, 132, 252, 0.5);
+      
+      --orb-1: rgba(192, 132, 252, 0.15);
+      --orb-2: rgba(34, 211, 238, 0.12);
     }
 
-    /* Dark Theme */
-    body[data-theme="dark"],
-    body[data-theme="dark-square"] {
-      --bg: #0b1220;     /* near-navy */
-      --bg-hero: #0f172a;
-      --surface: #0f172a;
-      --surface-2: #0e1628;
-      --text: #e5e7eb;
-      --muted: #9aa3b2;
-      --border: 1px solid rgba(255,255,255,.06);
-      --card-border: 1px solid rgba(255,255,255,.08);
-      --card-grad-1: rgba(59,130,246,.14);
-      --card-grad-2: rgba(59,130,246,.06);
-      --hero-grad-1: rgba(37,99,235,.18);
-      --hero-grad-2: rgba(59,130,246,.10);
-    }
-
-    /* ---------------------------------------
-       SQUARE THEMES (Overrides border radius)
-       --------------------------------------- */
-    body[data-theme="light-square"],
-    body[data-theme="dark-square"] {
-      --radius: 0px;
-      --radius-sm: 0px;
+    /* Sunrise Aurora (Light Mode) */
+    body[data-theme="sunrise"] {
+      --bg: #f8fafc;
+      --text: #0f172a;
+      --muted: #64748b;
+      
+      /* Accent Colors */
+      --brand-1: #9333ea; /* Deep Purple */
+      --brand-2: #0284c7; /* Deep Blue */
+      
+      /* Glass Surfaces */
+      --glass-bg: rgba(255, 255, 255, 0.6);
+      --glass-hover: rgba(255, 255, 255, 0.9);
+      --glass-border: rgba(15, 23, 42, 0.08);
+      --glass-border-hover: rgba(147, 51, 234, 0.4);
+      
+      --orb-1: rgba(147, 51, 234, 0.15);
+      --orb-2: rgba(2, 132, 199, 0.15);
     }
 
     /* -----------------------------
@@ -73,312 +62,279 @@
        ----------------------------- */
     *, *::before, *::after { box-sizing: border-box; }
     html, body { height: 100%; }
+    
     body {
       margin: 0;
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, "Segoe UI Variable", "Segoe UI Symbol", sans-serif;
+      font-family: system-ui, -apple-system, sans-serif;
       color: var(--text);
-      background:
-        radial-gradient(1200px 500px at 10% -10%, var(--hero-grad-1), transparent 60%),
-        radial-gradient(900px 450px at 110% -10%, var(--hero-grad-2), transparent 60%),
-        linear-gradient(180deg, var(--bg-hero), var(--bg));
+      background-color: var(--bg);
       display: flex;
       flex-direction: column;
       min-height: 100svh;
-      transition:
-        background-color var(--trans-med),
-        color var(--trans-med);
+      position: relative;
+      overflow-x: hidden;
+      transition: background-color var(--trans-med), color var(--trans-med);
     }
 
-    /* Smoothen color transitions on theme change */
-    header, .kicker, .theme-toggle, a.tool-card, .icon-wrap, .chev, .title, footer, .foot-border {
-      transition:
-        background-color var(--trans-med),
-        color var(--trans-med),
-        border-color var(--trans-med),
-        border-radius var(--trans-fast),
-        box-shadow var(--trans-fast);
+    /* Ambient Background Orbs */
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: -1;
+      pointer-events: none;
+      transition: background-color var(--trans-med);
+      animation: float 20s infinite ease-in-out alternate;
+    }
+    body::before {
+      width: 600px; height: 600px;
+      background: var(--orb-1);
+      top: -150px; left: -150px;
+    }
+    body::after {
+      width: 500px; height: 500px;
+      background: var(--orb-2);
+      bottom: -100px; right: -100px;
+      animation-delay: -10s;
+    }
+
+    @keyframes float {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(50px, 30px) scale(1.1); }
+      100% { transform: translate(-30px, 50px) scale(0.9); }
     }
 
     .page {
       width: 100%;
       max-width: 1200px;
       margin: 0 auto;
-      padding: clamp(16px, 2.5vw, 28px);
+      padding: clamp(20px, 4vw, 40px);
       display: flex;
       flex-direction: column;
-      gap: clamp(18px, 2.6vw, 28px);
+      gap: 32px;
       flex: 1;
+      z-index: 1;
     }
 
     /* -----------------------------
        Header / Hero
        ----------------------------- */
     header {
-      position: relative;
-      padding: clamp(18px, 3.2vw, 28px);
-      border-radius: calc(var(--radius) + 2px);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-      border: var(--border);
-      box-shadow: var(--shadow-1);
-      overflow: hidden;
-      isolation: isolate;
-    }
-    header::before {
-      content: "";
-      position: absolute; inset: -2px;
-      background:
-        radial-gradient(320px 320px at 12% 18%, var(--hero-grad-1), transparent 60%),
-        radial-gradient(320px 320px at 88% 12%, var(--hero-grad-2), transparent 60%);
-      z-index: -1;
-      filter: blur(4px);
-      transition: opacity var(--trans-med);
+      padding: 10px 0 20px 0;
     }
 
     .header-row {
       display: flex;
-      align-items: start;
+      align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      flex-wrap: wrap;
+      margin-bottom: 24px;
     }
 
-    .kicker {
+    .badge {
       display: inline-flex;
       align-items: center;
-      gap: .5rem;
-      padding: .38rem .7rem;
-      border-radius: 999px;
-      font-size: .8rem;
-      letter-spacing: .35px;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       color: var(--text);
-      background: linear-gradient(180deg, var(--card-grad-1), var(--card-grad-2));
-      border: 1px solid rgba(59,130,246,.35);
-      backdrop-filter: blur(6px);
-      white-space: nowrap;
     }
-    /* Square theme override for kicker */
-    body[data-theme="light-square"] .kicker,
-    body[data-theme="dark-square"] .kicker {
-      border-radius: var(--radius);
-    }
-
-    .kicker-dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, var(--brand-2), var(--brand));
-      box-shadow: 0 0 0 3px rgba(59,130,246,.18);
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--brand-2);
+      box-shadow: 0 0 10px var(--brand-2);
     }
 
     h1 {
-      margin: .6rem 0 0 0;
-      font-size: clamp(1.6rem, 2.8vw, 2.4rem);
-      line-height: 1.15;
-      letter-spacing: -.02em;
-      font-weight: 700;
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
     }
+    
     .sub {
-      margin-top: .55rem;
+      margin-top: 8px;
       color: var(--muted);
-      font-size: clamp(.95rem, 1.35vw, 1.05rem);
-      max-width: 60ch;
+      font-size: 1.1rem;
+      font-weight: 400;
+      max-width: 500px;
+      line-height: 1.5;
     }
 
     /* -----------------------------
-       Theme Toggle
+       Theme Toggle (Pill style)
        ----------------------------- */
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
     .theme-toggle {
       appearance: none;
-      border: var(--border);
-      background: var(--surface);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
       color: var(--text);
-      border-radius: 999px;
-      padding: 8px 12px;
+      border-radius: 99px;
+      padding: 8px 16px;
       display: inline-flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       cursor: pointer;
-      box-shadow: var(--shadow-1);
-      transition: transform var(--trans-fast), box-shadow var(--trans-fast), border-radius var(--trans-fast);
+      font-weight: 500;
+      font-size: 0.85rem;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      transition: all var(--trans-fast);
     }
-    
-    /* Square theme override for toggle */
-    body[data-theme="light-square"] .theme-toggle,
-    body[data-theme="dark-square"] .theme-toggle {
-      border-radius: var(--radius);
+    .theme-toggle:hover {
+      background: var(--glass-hover);
+      border-color: var(--glass-border-hover);
+      box-shadow: 0 0 15px var(--orb-1);
     }
-
-    .theme-toggle:hover { transform: translateY(-1px); box-shadow: var(--shadow-2); }
-    .theme-toggle:focus-visible { outline: none; box-shadow: 0 0 0 4px var(--ring), var(--shadow-2); }
-    .toggle-icon { width: 18px; height: 18px; display: block; }
-    .toggle-label { font-size: .9rem; color: var(--muted); }
+    .toggle-icon { width: 16px; height: 16px; fill: currentColor; }
 
     /* -----------------------------
        Tools Grid & Cards
        ----------------------------- */
     .tools {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: clamp(14px, 2vw, 20px);
-      align-items: stretch;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
     }
 
     a.tool-card {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
       text-decoration: none;
       color: var(--text);
-      padding: 16px;
+      padding: 18px;
       border-radius: var(--radius);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      border: var(--card-border);
-      box-shadow: var(--shadow-1);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      height: var(--card-height);
       position: relative;
       overflow: hidden;
-      outline: none;
-      height: var(--card-height);
-
-      transition:
-        transform var(--trans-fast),
-        box-shadow var(--trans-fast),
-        border-color var(--trans-fast),
-        background var(--trans-med),
-        border-radius var(--trans-fast),
-        color var(--trans-med);
+      transition: all var(--trans-med);
     }
-    a.tool-card::before {
-      content: "";
-      position: absolute; inset: 0;
-      background: linear-gradient(90deg, var(--card-grad-1), transparent 45%);
-      opacity: .9;
-      pointer-events: none;
-      transition: opacity var(--trans-fast);
-    }
+    
     a.tool-card:hover {
-      transform: translateY(-3px);
-      box-shadow: var(--shadow-2);
-      border-color: rgba(59,130,246,.45);
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-    }
-    a.tool-card:focus-visible {
-      box-shadow: 0 0 0 4px var(--ring), var(--shadow-2);
-      border-color: rgba(59,130,246,.65);
+      transform: translateY(-4px) scale(1.01);
+      background: var(--glass-hover);
+      border-color: var(--glass-border-hover);
+      box-shadow: 0 10px 30px -10px var(--orb-1);
     }
 
     .icon-wrap {
-      flex: 0 0 auto;
-      width: 42px; height: 42px;
+      flex-shrink: 0;
+      width: 48px; height: 48px;
       border-radius: var(--radius-sm);
       display: grid; place-items: center;
-      background: linear-gradient(180deg, var(--card-grad-1), var(--card-grad-2));
-      border: 1px solid rgba(59,130,246,.35);
-      transition: border-radius var(--trans-fast);
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--glass-border);
+      color: var(--brand-1);
+      transition: all var(--trans-med);
     }
+    a.tool-card:hover .icon-wrap {
+      background: var(--brand-1);
+      color: var(--bg);
+      border-color: transparent;
+      box-shadow: 0 0 15px var(--orb-1);
+    }
+    
     .icon {
-      width: 20px; height: 20px; display: block;
-      color: var(--brand);
+      width: 22px; height: 22px; 
       fill: currentColor;
     }
+    
     .label {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 10px; width: 100%;
+      display: flex; 
+      flex-direction: column;
+      gap: 4px;
       min-width: 0; 
+      width: 100%;
     }
+    
     .title {
-      font-size: 1rem; line-height: 1.25; font-weight: 600;
-      letter-spacing: .2px; color: var(--text);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+      font-size: 1.05rem; 
+      font-weight: 600;
+      white-space: nowrap; 
+      overflow: hidden; 
+      text-overflow: ellipsis; 
+      transition: color var(--trans-fast);
     }
+    
     .chev {
-      flex: 0 0 auto; width: 18px; height: 18px; opacity: .7;
-      transform: translateX(0);
-      transition: transform var(--trans-fast), opacity var(--trans-fast);
-      color: var(--muted);
+      position: absolute;
+      right: 20px;
+      width: 20px; height: 20px;
+      opacity: 0;
+      transform: translateX(-10px);
+      color: var(--brand-2);
       fill: currentColor;
+      transition: all var(--trans-med);
     }
-    a.tool-card:hover .chev { transform: translateX(3px); opacity: .95; }
+    
+    a.tool-card:hover .chev { 
+      opacity: 1; 
+      transform: translateX(0); 
+    }
 
     /* -----------------------------
        Footer
        ----------------------------- */
     footer {
       margin-top: auto;
-      padding: 18px;
+      padding: 24px;
       text-align: center;
       color: var(--muted);
-      font-size: .92rem;
-    }
-    .foot-border {
-      max-width: 1200px;
-      margin: 0 auto;
-      border-top: var(--border);
-      padding-top: 14px;
+      font-size: 0.9rem;
+      border-top: 1px solid var(--glass-border);
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
 
     /* -----------------------------
-       Mobile Tweaks
+       Responsive
        ----------------------------- */
-    @media (max-width: 520px) {
-      .header-row { align-items: center; }
-      .actions { width: 100%; justify-content: flex-end; }
-      a.tool-card { padding: 14px; }
-      .icon-wrap { width: 38px; height: 38px; }
-      .title { font-size: .98rem; }
-    }
-
-    /* -----------------------------
-       Fallback Theme Transition Overlay
-       ----------------------------- */
-    body.theme-transition::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background:
-        radial-gradient(160vmax 160vmax at var(--theme-x, 50%) var(--theme-y, 50%),
-          rgba(59,130,246,.28), transparent 60%),
-        rgba(0,0,0,.06);
-      mix-blend-mode: normal;
-      animation: themeFade var(--theme-anim) ease both;
-    }
-    @keyframes themeFade {
-      from { opacity: 1; }
-      to   { opacity: 0; }
-    }
-
-    /* Respect reduced motion */
-    @media (prefers-reduced-motion: reduce) {
-      * { transition: none !important; animation: none !important; }
+    @media (max-width: 600px) {
+      .header-row { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .theme-toggle { align-self: flex-start; }
+      .tools { grid-template-columns: 1fr; }
     }
   </style>
 </head>
-<body data-theme="light">
+<body data-theme="midnight">
+
   <main class="page">
     <header aria-label="Page header">
       <div class="header-row">
-        <span class="kicker">
-          <span class="kicker-dot" aria-hidden="true"></span>
-          Quick Access · Tools
+        <span class="badge">
+          <span class="badge-dot" aria-hidden="true"></span>
+          Workspace
         </span>
 
-        <div class="actions">
-          <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
-            <svg id="themeIcon" class="toggle-icon" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6.76 4.84 5.34 3.42 3.92 4.84l1.42 1.42 1.42-1.42ZM12 4V2h0v2h0Zm10 8h2v0h-2v0ZM4 12H2v0h2v0Zm1.34 7.76 1.42-1.42-1.42-1.42-1.42 1.42 1.42 1.42ZM12 22v-2h0v2h0Zm7.76-5.34-1.42-1.42-1.42 1.42 1.42 1.42 1.42-1.42ZM12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>
-            </svg>
-            <span id="themeLabel" class="toggle-label">Light</span>
-          </button>
-        </div>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
+          <svg id="themeIcon" class="toggle-icon" viewBox="0 0 24 24">
+            <path d="M20 12.35A8 8 0 1 1 11.65 4 6 6 0 0 0 20 12.35Z"/>
+          </svg>
+          <span id="themeLabel">Midnight</span>
+        </button>
       </div>
 
       <h1>My Web Tools</h1>
-      <p class="sub">A polished, responsive launchpad for your daily verification and research utilities.</p>
+      <p class="sub">Your personalized, high-performance launchpad for daily verification and research utilities.</p>
     </header>
 
     <section aria-label="Tools" class="tools">
@@ -388,10 +344,10 @@
             <path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42 9.3-9.29H14V3ZM5 5h6v2H7v10h10v-4h2v6H5V5Z"/>
           </svg>
         </span>
-        <span class="label">
-          <span class="title">Fetch Healthgrades with NPI list</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        <div class="label">
+          <span class="title">Healthgrades Data</span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="SC.html">
@@ -400,10 +356,10 @@
             <path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm3 7-6 6-2-2 1.41-1.41L9 12.17l4.59-4.58L15 9Z"/>
           </svg>
         </span>
-        <span class="label">
-          <span class="title">Fetch Sharecare with NPI list</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        <div class="label">
+          <span class="title">Sharecare Fetch</span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="HL.html">
@@ -412,10 +368,10 @@
             <path d="M3 12a9 9 0 1 1 18 0A9 9 0 0 1 3 12Zm10-5v4h4v2h-4v4h-2v-4H7v-2h4V7h2Z"/>
           </svg>
         </span>
-        <span class="label">
-          <span class="title">Fetch Healthline with NPI list (Possible redirection)</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        <div class="label">
+          <span class="title">Healthline Lookup</span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="MNT.html">
@@ -424,10 +380,10 @@
             <path d="M12 2 2 7l10 5 10-5-10-5Zm0 9L2 6v11l10 5 10-5V6l-10 5Z"/>
           </svg>
         </span>
-        <span class="label">
-          <span class="title">Fetch Medical News Today with NPI list (Possible redirection)</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        <div class="label">
+          <span class="title">Medical News Today</span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="folder_import.html">
@@ -436,10 +392,10 @@
             <path d="M10 4l2 2h8a2 2 0 0 1 2 2v1H4V6a2 2 0 0 1 2-2h4Zm12 6H2v8a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-8Z"/>
           </svg>
         </span>
-        <span class="label">
+        <div class="label">
           <span class="title">Folder Import</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="iframeviewer.html">
@@ -448,10 +404,10 @@
             <path d="M4 5h16v14H4V5Zm2 2v10h12V7H6Z"/>
           </svg>
         </span>
-        <span class="label">
+        <div class="label">
           <span class="title">Iframe Viewer</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="linkopener3.0.html">
@@ -460,10 +416,10 @@
             <path d="M3 12a5 5 0 0 1 5-5h4v2H8a3 3 0 1 0 0 6h4v2H8a5 5 0 0 1-5-5Zm8-3h5a5 5 0 0 1 0 10h-5v-2h5a3 3 0 1 0 0-6h-5V9Z"/>
           </svg>
         </span>
-        <span class="label">
+        <div class="label">
           <span class="title">Link Opener 3.0</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="location search.html">
@@ -472,10 +428,10 @@
             <path d="M12 2a7 7 0 0 1 7 7c0 5.25-7 13-7 13S5 14.25 5 9a7 7 0 0 1 7-7Zm0 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/>
           </svg>
         </span>
-        <span class="label">
+        <div class="label">
           <span class="title">Location Search</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="Provider search.html">
@@ -484,10 +440,10 @@
             <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.33 0-8 2.17-8 5v1h16v-1c0-2.83-3.67-5-8-5Z"/>
           </svg>
         </span>
-        <span class="label">
+        <div class="label">
           <span class="title">Provider Search</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="bing search.html">
@@ -496,10 +452,10 @@
             <path d="M5 3v13.5L13.5 21l5.5-3-6.5-2.5V6.2L8 4.5 5 3Z"/>
           </svg>
         </span>
-        <span class="label">
+        <div class="label">
           <span class="title">Bing Search</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="yelp_search_from_NPI.html">
@@ -508,10 +464,10 @@
             <path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>
           </svg>
         </span>
-        <span class="label">
+        <div class="label">
           <span class="title">Yelp Search from NPI</span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="all4.html">
@@ -520,10 +476,10 @@
             <path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>
           </svg>
         </span>
-        <span class="label">
-          <span class="title">Fetch HG SC MNT HL </span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        <div class="label">
+          <span class="title">Fetch All Core 4</span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
 
       <a class="tool-card" href="FS.html">
@@ -532,92 +488,53 @@
             <path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3Z"/>
           </svg>
         </span>
-        <span class="label">
-          <span class="title">Fs search </span>
-          <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
-        </span>
+        <div class="label">
+          <span class="title">FS Search</span>
+        </div>
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9.29 6.71 13.58 11l-4.29 4.29 1.42 1.42L16.42 11l-5.71-5.71-1.42 1.42Z"/></svg>
       </a>
     </section>
   </main>
 
   <footer>
-    <div class="foot-border">Abhiram &copy;</div>
+    <div>Abhiram &copy; 2024</div>
   </footer>
 
   <script>
-    // Theme persistence. Default is LIGHT. If a saved preference exists, we respect it.
     (function () {
       const body = document.body;
       const toggleBtn = document.getElementById('themeToggle');
       const icon = document.getElementById('themeIcon');
       const label = document.getElementById('themeLabel');
 
-      // Supported themes (added light/dark with Square Cards variants)
-      const THEMES = ['light', 'dark', 'light-square', 'dark-square'];
+      // The new themes
+      const THEMES = ['midnight', 'sunrise'];
 
-      const saved = localStorage.getItem('theme'); // 'light' | 'dark' | 'light-square' | 'dark-square' | null
-      const initial = THEMES.includes(saved) ? saved : (saved === 'dark' ? 'dark' : 'light');
-      setTheme(initial, false);
+      // Load preference
+      let saved = localStorage.getItem('aurora-theme');
+      if (!THEMES.includes(saved)) saved = 'midnight';
+      
+      applyTheme(saved);
 
-      function setTheme(theme, animate = true, origin = { x: null, y: null }) {
-        // Progressive enhancement: View Transition API if supported
-        const apply = () => {
-          body.setAttribute('data-theme', theme);
-          localStorage.setItem('theme', theme);
-          updateToggleVisual(theme);
-        };
+      function applyTheme(theme) {
+        body.setAttribute('data-theme', theme);
+        localStorage.setItem('aurora-theme', theme);
 
-        if (animate) {
-          // Store click position for radial fallback
-          if (origin.x != null && origin.y != null) {
-            body.style.setProperty('--theme-x', origin.x + 'px');
-            body.style.setProperty('--theme-y', origin.y + 'px');
-          } else {
-            body.style.removeProperty('--theme-x');
-            body.style.removeProperty('--theme-y');
-          }
-
-          if (document.startViewTransition) {
-            document.startViewTransition(apply);
-          } else {
-            // Fallback: add a fading overlay
-            body.classList.add('theme-transition');
-            apply();
-            setTimeout(() => body.classList.remove('theme-transition'), 450);
-          }
-        } else {
-          apply();
-        }
-      }
-
-      function updateToggleVisual(theme) {
-        const isDark = theme.includes('dark');
-        const isSquare = theme.includes('square');
-
-        // Icon: moon for any dark*, sun for any light*
-        if (isDark) {
+        if (theme === 'midnight') {
+          // Moon icon
           icon.innerHTML = '<path d="M20 12.35A8 8 0 1 1 11.65 4 6 6 0 0 0 20 12.35Z"/>';
+          label.textContent = 'Midnight';
         } else {
+          // Sun icon
           icon.innerHTML = '<path d="M6.76 4.84 5.34 3.42 3.92 4.84l1.42 1.42 1.42-1.42ZM12 4V2h0v2h0Zm10 8h2v0h-2v0ZM4 12H2v0h2v0Zm1.34 7.76 1.42-1.42-1.42-1.42-1.42 1.42 1.42 1.42ZM12 22v-2h0v2h0Zm7.76-5.34-1.42-1.42-1.42 1.42 1.42 1.42 1.42-1.42ZM12 6a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/>';
+          label.textContent = 'Sunrise';
         }
-
-        // Label text
-        label.textContent = isDark
-          ? (isSquare ? 'Dark · Square' : 'Dark')
-          : (isSquare ? 'Light · Square' : 'Light');
       }
 
-      toggleBtn.addEventListener('click', (e) => {
-        const current = body.getAttribute('data-theme') || 'light';
-        const idx = THEMES.indexOf(current);
-        const next = THEMES[(idx + 1) % THEMES.length];
-
-        const rect = e.currentTarget.getBoundingClientRect();
-        const origin = {
-          x: Math.round(rect.left + rect.width / 2),
-          y: Math.round(rect.top + rect.height / 2)
-        };
-        setTheme(next, true, origin);
+      toggleBtn.addEventListener('click', () => {
+        const current = body.getAttribute('data-theme');
+        const next = current === 'midnight' ? 'sunrise' : 'midnight';
+        applyTheme(next);
       });
     })();
   </script>
