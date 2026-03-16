@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foursquare URL Generator</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; padding: 40px; max-width: 900px; margin: auto; background: #f0f2f5; color: #333; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h2 { color: #0732a2; margin-top: 0; }
+        textarea { width: 100%; height: 180px; margin-bottom: 15px; border: 2px solid #ddd; border-radius: 8px; padding: 12px; font-family: monospace; box-sizing: border-box; transition: border-color 0.3s; }
+        textarea:focus { border-color: #0732a2; outline: none; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        button { flex: 1; padding: 12px; cursor: pointer; border-radius: 6px; font-weight: bold; border: none; transition: transform 0.1s, opacity 0.3s; }
+        .btn-generate { background: #0732a2; color: white; }
+        .btn-copy { background: #27ae60; color: white; display: none; }
+        button:hover { opacity: 0.9; }
+        button:active { transform: scale(0.98); }
+        #results { margin-top: 25px; border-top: 2px solid #eee; pt: 20px; }
+        .link-item { padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85em; overflow-wrap: break-word; }
+        .link-item:last-child { border-bottom: none; }
+        .link-item a { color: #eb4d4b; text-decoration: none; font-weight: 500; }
+        .link-item a:hover { text-decoration: underline; }
+        .status-msg { font-size: 0.9em; color: #27ae60; margin-left: 10px; font-weight: normal; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Foursquare URL Builder</h2>
+    <p>Paste your list (one per line). Format: <b>Name, Location</b></p>
+    
+    <textarea id="inputData" placeholder="Behavioral Health West Valley-cr, West Valley City, UT&#10;Starbucks, Times Square NY"></textarea>
+    
+    <div class="btn-group">
+        <button class="btn-generate" onclick="generateLinks()">Generate URLs</button>
+        <button id="copyBtn" class="btn-copy" onclick="copyAllToClipboard()">Copy All URLs <span id="copyStatus"></span></button>
+    </div>
+
+    <div id="results" style="display:none;">
+        <h3>Results</h3>
+        <div id="linkList"></div>
+    </div>
+</div>
+
+<script>
+    let generatedUrls = [];
+
+    function generateLinks() {
+        const input = document.getElementById('inputData').value;
+        const lines = input.split('\n');
+        const linkList = document.getElementById('linkList');
+        const resultsDiv = document.getElementById('results');
+        const copyBtn = document.getElementById('copyBtn');
+        
+        linkList.innerHTML = ''; 
+        generatedUrls = []; // Reset the global array
+        
+        lines.forEach(line => {
+            const trimmedLine = line.trim();
+            if (trimmedLine === '') return;
+
+            let name, location;
+            if (trimmedLine.includes(',')) {
+                let parts = trimmedLine.split(',');
+                name = parts[0].trim();
+                location = parts.slice(1).join(',').trim();
+            } else {
+                // If no comma, we split by last space or just use the whole string
+                name = trimmedLine;
+                location = trimmedLine;
+            }
+
+            const baseUrl = "https://app.foursquare.com/explore";
+            const params = new URLSearchParams({
+                'mode': 'url',
+                'near': location,
+                'q': name
+            });
+
+            const finalUrl = `${baseUrl}?${params.toString()}`;
+            generatedUrls.push(finalUrl);
+
+            const div = document.createElement('div');
+            div.className = 'link-item';
+            div.innerHTML = `<strong>${name}:</strong><br><a href="${finalUrl}" target="_blank">${finalUrl}</a>`;
+            linkList.appendChild(div);
+        });
+
+        if (generatedUrls.length > 0) {
+            resultsDiv.style.display = 'block';
+            copyBtn.style.display = 'block';
+        }
+    }
+
+    async function copyAllToClipboard() {
+        if (generatedUrls.length === 0) return;
+        
+        const textToCopy = generatedUrls.join('\n');
+        const statusSpan = document.getElementById('copyStatus');
+
+        try {
+            await navigator.clipboard.writeText(textToCopy);
+            statusSpan.textContent = "(Copied!)";
+            setTimeout(() => { statusSpan.textContent = ""; }, 2000);
+        } catch (err) {
+            alert('Failed to copy: ', err);
+        }
+    }
+</script>
+
+</body>
+</html>

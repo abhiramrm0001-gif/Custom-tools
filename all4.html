@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>fech</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    /* --- Professional Data Tool Styling (clean, aligned) --- */
+    :root{
+      --primary:#2563eb;
+      --primary-hover:#1d4ed8;
+      --bg-main:#f8fafc;
+      --card-bg:#ffffff;
+      --text-main:#0f172a;
+      --text-muted:#64748b;
+      --border:#e2e8f0;
+      --success:#10b981;
+      --hg-color:#2563eb;
+      --hl-color:#d92d2d;
+      --mnt-color:#2e7d32;
+      --sc-color:#9333ea;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background:var(--bg-main);
+      color:var(--text-main);
+      line-height:1.5;
+      padding:2rem;
+    }
+    .container{max-width:1480px;margin:0 auto}
+
+    /* Header */
+    .header-area{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      align-items:end;
+      gap:1rem;
+      margin-bottom:2rem;
+      border-bottom:2px solid var(--border);
+      padding-bottom:1rem;
+    }
+    h2{
+      font-size:1.5rem;
+      font-weight:700;
+      letter-spacing:-0.025em;
+    }
+    #timer-box{text-align:right;display:none}
+    .eta-main{font-weight:600;color:var(--primary);font-size:0.95rem}
+    .expected-at{font-size:0.78rem;color:var(--text-muted)}
+
+    /* Card */
+    .card{
+      background:var(--card-bg);
+      padding:1.25rem;
+      border-radius:10px;
+      box-shadow:0 1px 3px rgba(0,0,0,.06);
+      margin-bottom:1.25rem;
+      border:1px solid var(--border);
+    }
+    textarea{
+      width:100%;
+      height:120px;
+      padding:1rem;
+      border:1px solid var(--border);
+      border-radius:8px;
+      font-family:'JetBrains Mono','Fira Code',monospace;
+      font-size:0.9rem;
+      resize:vertical;
+      margin-bottom:1rem;
+      transition:border-color .2s, box-shadow .2s;
+      background:#fff;
+    }
+    textarea:focus{
+      outline:none;
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(37,99,235,.12);
+    }
+
+    /* Controls row - perfectly aligned */
+    .controls{
+      display:grid;
+      grid-template-columns: auto 1fr;
+      align-items:center;
+      gap:14px;
+    }
+    .button-group{display:flex; gap:10px}
+    button{
+      cursor:pointer;
+      font-size:0.9rem;
+      font-weight:600;
+      padding:0.55rem 1.1rem;
+      border-radius:8px;
+      border:1px solid transparent;
+      transition:background .2s, color .2s, box-shadow .2s, border-color .2s;
+      line-height:1;
+      height:38px;
+    }
+    .btn-run{background:var(--primary); color:#fff}
+    .btn-run:hover{background:var(--primary-hover)}
+    .btn-run:disabled{background:#94a3b8; color:#fff; cursor:not-allowed}
+    .btn-csv{background:#fff; color:var(--text-main); border-color:var(--border)}
+    .btn-csv:hover{background:#f8fafc}
+    .btn-copy-all{background:#0f172a; color:#fff}
+    .btn-copy-all:hover{background:#111827}
+
+    .progress-container{
+      display:none;
+      height:18px;
+      background:#e2e8f0;
+      border-radius:12px;
+      overflow:hidden;
+      border:1px solid #cbd5e1;
+      position:relative;
+      align-items:center;
+    }
+    .progress-bar{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg,#2563eb,#60a5fa);
+      transition:width .35s ease;
+    }
+    .progress-text{
+      position:absolute;
+      right:10px;
+      font-size:12px;
+      font-weight:700;
+      color:#0f172a;
+      mix-blend-mode:soft-light;
+      pointer-events:none;
+    }
+
+    /* Table */
+    .table-container{
+      background:var(--card-bg);
+      border-radius:10px;
+      border:1px solid var(--border);
+      overflow:auto;
+      box-shadow:0 1px 3px rgba(0,0,0,.05);
+    }
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      font-size:0.9rem;
+      min-width:1280px;
+    }
+    col.npi{width:90px}
+    col.provider{width:320px}
+    col.site{width:260px}
+    col.speed{width:90px}
+    thead th{
+      position:sticky; top:0; z-index:1; /* keeps header visible while scrolling horizontally */
+      background:#f1f5f9;
+      padding:0.85rem 1rem;
+      font-weight:700;
+      text-transform:uppercase;
+      font-size:0.72rem;
+      letter-spacing:.06em;
+      color:var(--text-muted);
+      border-bottom:1px solid var(--border);
+    }
+    tbody td{
+      padding:0.9rem 1rem;
+      border-bottom:1px solid var(--border);
+      vertical-align:top;
+      background:#fff;
+    }
+    tbody tr:hover td{background:#f8fafc}
+    tr:last-child td{border-bottom:none}
+
+    .time-badge{
+      background:#f1f5f9;
+      padding:2px 6px;
+      border-radius:6px;
+      font-family:monospace;
+      color:var(--text-muted);
+      display:inline-block;
+      min-width:66px;
+      text-align:center;
+    }
+    .site-badge{
+      display:inline-block;
+      font-weight:700;
+      font-size:0.7rem;
+      padding:3px 8px;
+      border-radius:999px;
+      color:#fff;
+      margin-bottom:6px;
+      letter-spacing:.02em;
+    }
+    .bg-hg{background:var(--hg-color)}
+    .bg-hl{background:var(--hl-color)}
+    .bg-mnt{background:var(--mnt-color)}
+    .bg-sc{background:var(--sc-color)}
+
+    .id-text{
+      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:0.86rem;
+      margin-bottom:6px;
+      color:var(--text-main);
+      font-weight:600;
+      word-break:break-all;
+    }
+
+    /* URL row: crisp alignment of link + copy */
+    .url-row{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      align-items:center;
+      gap:10px;
+    }
+    .copy-container{position:relative; display:flex; align-items:center}
+    .btn-copy-mini{
+      background:#fff;
+      border:1px solid var(--border);
+      padding:3px 10px;
+      font-size:0.75rem;
+      color:var(--text-main);
+      border-radius:6px;
+      height:26px;
+      line-height:1;
+    }
+    .btn-copy-mini:hover{background:#f1f5f9}
+
+    .copy-toast{
+      position:absolute;
+      top:-26px; left:50%; transform:translateX(-50%);
+      background:#0f172a;
+      color:#fff;
+      padding:2px 7px;
+      border-radius:6px;
+      font-size:0.7rem;
+      opacity:0;
+      transition:opacity .18s ease;
+      pointer-events:none;
+      z-index:5;
+      white-space:nowrap;
+    }
+    .copy-toast.show{opacity:1}
+
+    .link-text{
+      text-decoration:none;
+      font-size:0.8rem;
+      color:var(--primary);
+      word-break:break-all;
+      line-height:1.25;
+    }
+    .link-text:hover{text-decoration:underline}
+
+    /* Provider block tidy */
+    .prov-name{font-weight:700; color:#0f172a; margin-bottom:2px}
+    .prov-sub{font-size:0.85rem; color:var(--text-muted)}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-area">
+      <h2>Extract (HG, HL, MNT, SC)</h2>
+      <div id="timer-box">
+        <div id="etaDisplay" class="eta-main">ETA: --:--</div>
+        <div id="expectedTime" class="expected-at">Expected at: --:--</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <textarea id="npiInput" placeholder="Paste NPIs (one per line)..."></textarea>
+
+      <div class="controls">
+        <div class="button-group">
+          <button id="runBtn" class="btn-run">Fetch</button>
+          <button id="csvBtn" class="btn-csv">Download CSV</button>
+          <button id="copyAllBtn" class="btn-copy-all">Copy Table</button>
+        </div>
+
+        <div id="progressContainer" class="progress-container">
+          <div id="progressBar" class="progress-bar"></div>
+          <span id="progressPercent" class="progress-text">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table id="resTable">
+        <colgroup>
+          <col class="npi" />
+          <col class="provider" />
+          <col class="site" />
+          <col class="site" />
+          <col class="site" />
+          <col class="site" />
+          <col class="speed" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th>NPI</th>
+            <th>Provider Details</th>
+            <th>Healthgrades</th>
+            <th>Healthline</th>
+            <th>Medical News Today</th>
+            <th>Sharecare</th>
+            <th>Speed</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    let results = [];
+
+    function copyUrl(btn, url){
+      if (url === "N/A" || !url) return;
+      navigator.clipboard.writeText(url).then(() => {
+        const toast = btn.parentElement.querySelector('.copy-toast');
+        if (toast){
+          toast.classList.add('show');
+          setTimeout(() => toast.classList.remove('show'), 1200);
+        }
+      });
+    }
+
+    function constructSlug(name){
+      if (!name) return "";
+      let clean = name.split(',')[0];
+      clean = clean.replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-');
+      return clean.toLowerCase();
+    }
+
+    async function fetchWithRetry(url, retries = 3){
+      for (let i = 0; i < retries; i++){
+        try{
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const response = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          if (!response.ok) throw new Error('Network error');
+          return await response.json();
+        }catch(e){
+          if (i < retries - 1) await new Promise(r => setTimeout(r, 1200));
+        }
+      }
+      return null;
+    }
+
+    async function fetchAllDataForNpi(npi){
+      const start = performance.now();
+
+      const [hgRes, hlRes, mntRes, scRes] = await Promise.all([
+        fetchWithRetry(`https://apps.healthgrades.com/api/list-requests/check/?list=leqembi-2&npi=${npi}`),
+        fetchWithRetry(`https://care.healthline.com/find-care/hg-search-api/condition-typeahead?qwhat=${npi}`),
+        fetchWithRetry(`https://connect.medicalnewstoday.com/provider/hg-search-api/condition-typeahead?qwhat=${npi}&qwhere=`),
+        fetchWithRetry(`https://providers.sharecare.com/doctor/hg-search-api/condition-typeahead?qwhat=${npi}`)
+      ]);
+
+      let combined = {
+        npi: npi, name: "N/A", spec: "N/A", loc: "N/A",
+        hg: { id: "N/A", url: "N/A" },
+        hl: { id: "N/A", url: "N/A" },
+        mnt: { id: "N/A", url: "N/A" },
+        sc: { id: "N/A", url: "N/A" },
+        fetchTime: 0
+      };
+
+      if (hgRes){
+        combined.hg.id = hgRes?.pwid ?? "N/A";
+        combined.name = hgRes?.name ?? "N/A";
+        combined.spec = hgRes?.speciality ?? "N/A";
+        combined.loc  = hgRes?.address ?? "N/A";
+        combined.hg.url = hgRes?.profile ?? "N/A";
+      }
+
+      const parseTypeahead = (res, site) => {
+        let data = { id: "N/A", url: "N/A", name: null, spec: null, loc: null };
+        const suggestion = res?.externalItems?.find(x => x.category === "Name Match")?.suggestions?.[0];
+
+        if (suggestion){
+          data.name = suggestion.text ?? null;
+          data.spec = suggestion.specialty ?? null;
+          data.loc  = suggestion.city ?? null;
+
+          if (suggestion.url){
+            const cleanPath = suggestion.url.split('?')[0];
+            const segments = cleanPath.split('-');
+            data.id = segments[segments.length - 1] ?? "N/A";
+
+            if (site === 'HL'){
+              const slug = constructSlug(suggestion.text);
+              data.url = slug ? `https://care.healthline.com/find-care/provider/${slug}-${npi}` : "N/A";
+            }else if (site === 'MNT'){
+              const filename = cleanPath.split('/').pop();
+              const lastHyphen = filename.lastIndexOf('-');
+              const slugName = lastHyphen !== -1 ? filename.substring(0, lastHyphen) : cleanPath;
+              data.url = `https://connect.medicalnewstoday.com/provider/${slugName}-${npi}`;
+            }else if (site === 'SC'){
+              data.url = "https://providers.sharecare.com" + cleanPath;
+            }
+          }
+        }
+        return data;
+      };
+
+      const hlData  = parseTypeahead(hlRes, 'HL');
+      const mntData = parseTypeahead(mntRes, 'MNT');
+      const scData  = parseTypeahead(scRes, 'SC');
+
+      combined.hl.id  = hlData.id;  combined.hl.url  = hlData.url;
+      combined.mnt.id = mntData.id; combined.mnt.url = mntData.url;
+      combined.sc.id  = scData.id;  combined.sc.url  = scData.url;
+
+      if (combined.name === "N/A"){
+        combined.name = hlData.name || mntData.name || scData.name || "N/A";
+        combined.spec = hlData.spec || mntData.spec || scData.spec || "N/A";
+        combined.loc  = hlData.loc  || mntData.loc  || scData.loc  || "N/A";
+      }
+
+      combined.fetchTime = Math.round(performance.now() - start);
+      return combined;
+    }
+
+    document.getElementById('runBtn').onclick = async () => {
+      const overallStart = performance.now();
+      const lines = document.getElementById('npiInput').value
+        .split('\n').map(s => s.trim()).filter(Boolean);
+
+      if (!lines.length) return;
+
+      const runBtn = document.getElementById('runBtn');
+      const timerBox = document.getElementById('timer-box');
+      const etaDisplay = document.getElementById('etaDisplay');
+      const expectedDisplay = document.getElementById('expectedTime');
+      const progressContainer = document.getElementById('progressContainer');
+      const progressBar = document.getElementById('progressBar');
+      const progressPercent = document.getElementById('progressPercent');
+
+      runBtn.disabled = true;
+      timerBox.style.display = 'block';
+      progressContainer.style.display = 'flex';
+      progressBar.style.width = '0%';
+      progressPercent.innerText = '0%';
+      progressPercent.style.color = '#0f172a';
+
+      const tbody = document.querySelector('#resTable tbody');
+      tbody.innerHTML = "";
+      results = [];
+
+      for (let i = 0; i < lines.length; i++){
+        const percent = Math.round(((i + 1) / lines.length) * 100);
+        progressBar.style.width = `${percent}%`;
+        progressPercent.innerText = `${percent}%`;
+        progressPercent.style.color = percent > 55 ? '#ffffff' : '#0f172a';
+
+        const secondsLeft = (lines.length - i) * 2;
+        etaDisplay.innerText = `ETA: ${Math.floor(secondsLeft/60)}m ${Math.ceil(secondsLeft%60)}s left`;
+        expectedDisplay.innerText = `Expected at: ${new Date(Date.now() + secondsLeft*1000).toLocaleTimeString()}`;
+
+        const item = await fetchAllDataForNpi(lines[i]);
+        results.push(item);
+
+        const generateCell = (siteObj, badgeClass, siteName) => `
+          <td>
+            <span class="site-badge ${badgeClass}">${siteName}</span>
+            <div class="id-text">${siteObj.id}</div>
+            ${
+              siteObj.url !== "N/A"
+                ? `<div class="url-row">
+                    <a href="${siteObj.url}" target="_blank" class="link-text">${siteObj.url}</a>
+                    <div class="copy-container">
+                      <span class="copy-toast">Copied!</span>
+                      <button class="btn-copy-mini" onclick="copyUrl(this, '${siteObj.url}')">Copy</button>
+                    </div>
+                   </div>`
+                : '<div class="prov-sub" style="font-size:0.8rem;">Not Found</div>'
+            }
+          </td>
+        `;
+
+        const row = tbody.insertRow(0);
+        row.innerHTML = `
+          <td><strong>${item.npi}</strong></td>
+          <td>
+            <div class="prov-name">${item.name}</div>
+            <div class="prov-sub">${item.spec}</div>
+            <div class="prov-sub">${item.loc}</div>
+          </td>
+          ${generateCell(item.hg, 'bg-hg', 'HG')}
+          ${generateCell(item.hl, 'bg-hl', 'HL')}
+          ${generateCell(item.mnt, 'bg-mnt', 'MNT')}
+          ${generateCell(item.sc, 'bg-sc', 'SC')}
+          <td><span class="time-badge">${item.fetchTime}ms</span></td>
+        `;
+
+        if (i < lines.length - 1) await new Promise(r => setTimeout(r, 1200));
+      }
+
+      const totalMs = performance.now() - overallStart;
+      runBtn.disabled = false;
+      etaDisplay.innerText = "Completed";
+      expectedDisplay.innerText = `Total Time: ${Math.floor((totalMs/1000)/60)}m ${Math.floor((totalMs/1000)%60)}s`;
+
+      setTimeout(() => { progressContainer.style.display = 'none'; }, 2500);
+    };
+
+    document.getElementById('csvBtn').onclick = () => {
+      if (!results.length) return;
+      const header = "NPI,Name,Specialty,Location,HG_PWID,HG_URL,HL_ID,HL_URL,MNT_ID,MNT_URL,SC_ID,SC_URL,FetchTime\n";
+      const rows = results.map(r =>
+        `"${r.npi}","${r.name}","${r.spec}","${r.loc}","${r.hg.id}","${r.hg.url}","${r.hl.id}","${r.hl.url}","${r.mnt.id}","${r.mnt.url}","${r.sc.id}","${r.sc.url}","${r.fetchTime}"`
+      ).join('\n');
+      const blob = new Blob([header + rows], { type: 'text/csv' });
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `Omni_Scan_Results.csv` });
+      a.click();
+    };
+
+    document.getElementById('copyAllBtn').onclick = () => {
+      if (!results.length) return;
+      const headers = ["NPI","Name","Specialty","Location","HG PWID","HG URL","HL ID","HL URL","MNT ID","MNT URL","SC ID","SC URL","Speed (ms)"];
+      const rows = results.map(r => [
+        r.npi, r.name, r.spec, r.loc,
+        r.hg.id, r.hg.url, r.hl.id, r.hl.url,
+        r.mnt.id, r.mnt.url, r.sc.id, r.sc.url,
+        r.fetchTime
+      ].join('\t'));
+      navigator.clipboard.writeText([headers.join('\t'), ...rows].join('\n')).then(() => {
+        const btn = document.getElementById('copyAllBtn');
+        const originalText = btn.innerText;
+        btn.innerText = "Copied!";
+        btn.style.background = "#1f2937";
+        setTimeout(() => { btn.innerText = originalText; btn.style.background = "#0f172a"; }, 1200);
+      });
+    };
+  </script>
+</body>
+</html>
