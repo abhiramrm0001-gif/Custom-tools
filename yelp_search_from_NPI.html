@@ -17,14 +17,14 @@
         textarea {
             width: 100%; height: 100px; padding: 12px; border: 2px solid #dfe6e9;
             border-radius: 8px; font-family: monospace; margin-bottom: 15px; outline: none;
+            box-sizing: border-box;
         }
         textarea:focus { border-color: #e00707; }
 
-        /* Progress Dashboard */
         .dashboard {
             background: white; padding: 20px; border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px;
-            display: none; /* Hidden until processing starts */
+            display: none; 
         }
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 15px; }
         .stat-box { text-align: center; border-right: 1px solid #eee; }
@@ -42,34 +42,24 @@
         }
         #genBtn { background: #e00707; color: white; }
         .util-btn { background: #2d3436; color: white; display: none; }
+        button:hover { opacity: 0.9; }
         button:disabled { background: #b2bec3 !important; cursor: not-allowed; }
 
-        /* 4-Column Table */
         table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         th { background: #2d3436; color: white; text-align: left; padding: 12px; font-size: 0.9rem; }
         td { padding: 12px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
         tr:hover { background-color: #f1f2f6; }
         .yelp-link { color: #0073bb; text-decoration: none; font-weight: bold; }
+        .yelp-link:visited { color: #8e44ad; }
+        .yelp-link.clicked { color: #b2bec3; text-decoration: line-through; opacity: 0.7; }
         .error-row { color: #d63031; font-style: italic; }
-
-        /* Style for links already in browser history */
-        .yelp-link:visited {
-            color: #8e44ad; /* Muted purple to show it's been visited */
-        }
-
-        /* Style for immediate feedback when clicked */
-        .yelp-link.clicked {
-            color: #b2bec3;
-            text-decoration: line-through;
-            opacity: 0.7;
-        }     
     </style>
 </head>
 <body>
 
     <div class="header">
         <h2>NPI to Yelp URL List</h2>
-        <p>Convert your NPI batch into search URLs with live progress tracking.</p>
+        <p>Convert NPI numbers into localized Yelp search URLs.</p>
     </div>
 
     <textarea id="npiInput" placeholder="Enter NPI numbers (one per line)..."></textarea>
@@ -84,7 +74,7 @@
         <div class="stats-grid">
             <div class="stat-box"><span id="statProgress" class="stat-val">0/0</span><span class="stat-label">Processed</span></div>
             <div class="stat-box"><span id="statPercent" class="stat-val">0%</span><span class="stat-label">Complete</span></div>
-            <div class="stat-box"><span id="statETA" class="stat-val">--</span><span class="stat-label">Estimated ETA</span></div>
+            <div class="stat-box"><span id="statETA" class="stat-val">--</span><span class="stat-label">Time Remaining</span></div>
         </div>
         <div class="progress-container"><div id="progressBar"></div></div>
     </div>
@@ -104,177 +94,119 @@
     <script>
         let results = [];
 
-        // --- HARDENED FETCH: tries direct, then multiple CORS proxies ---
         async function getNPIData(npi) {
-            const base = `https://npiregistry.cms.hhs.gov/api/?version=2.1&number=${encodeURIComponent(npi)}`;
-            const endpoints = [
-                // Try direct first (works if NPI API allows CORS in your context)
-                base,
-                // Proxies: note the target URL is NOT URL-encoded for these two
-                `https://corsproxy.io/?${base}`,
-                `https://cors.isomorphic-git.org/${base}`,
-                // AllOrigins returns raw body: parse JSON from text
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(base)}`
+            const apiURL = `https://npiregistry.cms.hhs.gov/api/?version=2.1&number=${npi}`;
+            // Prioritize AllOrigins and CorsProxy.io as they are currently more stable for this API
+            const proxies = [
+                `https://api.allorigins.win/get?url=${encodeURIComponent(apiURL)}`,
+                `https://corsproxy.io/?${encodeURIComponent(apiURL)}`
             ];
 
-            for (const url of endpoints) {
+            for (const url of proxies) {
                 try {
-                    const res = await fetch(url, { method: 'GET' });
+                    const res = await fetch(url);
                     if (!res.ok) continue;
-
-                    // Content-type may be missing via some proxies; fall back to text->JSON
-                    const ct = (res.headers.get('content-type') || '').toLowerCase();
-                    let data;
-                    if (ct.includes('application/json')) {
-                        data = await res.json();
-                    } else {
-                        const txt = await res.text();
-                        try { data = JSON.parse(txt); } catch { data = null; }
-                    }
+                    
+                    const json = await res.json();
+                    // AllOrigins wraps the response in a .contents string
+                    const data = typeof json.contents === 'string' ? JSON.parse(json.contents) : json;
+                    
                     if (data && (data.results || data.Errors)) return data;
-                } catch (e) {
-                    // try next endpoint
-                }
+                } catch (e) { console.error("Proxy failed:", url); }
             }
-            throw new Error('All CORS endpoints failed');
-        }
-
-        function selectBestAddress(addresses = []) {
-            // Prefer LOCATION purpose; fallback to first address
-            return addresses.find(a => a.address_purpose === 'LOCATION') || addresses[0] || null;
+            throw new Error('CORS fail');
         }
 
         function makeDisplayName(basic = {}) {
-            const first = (basic.first_name || '').trim();
-            const last = (basic.last_name || '').trim();
-            const org = (basic.organization_name || '').trim();
-            const name = (first || last) ? `${first} ${last}`.trim() : org;
-            return name || 'Unknown';
+            if (basic.organization_name) return basic.organization_name;
+            const first = basic.first_name || '';
+            const last = basic.last_name || '';
+            return `${first} ${last}`.trim() || 'Unknown';
         }
 
         async function processNPIs() {
             const input = document.getElementById('npiInput').value;
-            const npis = input.split('\n')
-                              .map(n => n.trim())
-                              .filter(n => n);
+            const npis = input.split('\n').map(n => n.trim()).filter(n => /^\d+$/.test(n));
 
-            if (npis.length === 0) return alert("Enter at least one NPI.");
+            if (npis.length === 0) return alert("Please enter valid numeric NPIs.");
 
             // Reset UI
             results = [];
-            const genBtn = document.getElementById('genBtn');
-            const dashboard = document.getElementById('dashboard');
-            const tableBody = document.getElementById('tableBody');
-            const table = document.getElementById('resultTable');
-            const utilBtns = document.querySelectorAll('.util-btn');
-
-            genBtn.disabled = true;
-            dashboard.style.display = 'block';
-            table.style.display = 'table';
-            tableBody.innerHTML = '';
-            utilBtns.forEach(b => b.style.display = 'none');
-
+            document.getElementById('genBtn').disabled = true;
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('resultTable').style.display = 'table';
+            document.getElementById('tableBody').innerHTML = '';
+            
             const startTime = Date.now();
 
             for (let i = 0; i < npis.length; i++) {
-                const npi = npis[i];
-                let rowData = { npi, name: 'Loading...', loc: '--', url: null };
-
+                let rowData = { npi: npis[i], name: 'Searching...', loc: '--', url: null };
+                
                 try {
-                    const data = await getNPIData(npi);
-
+                    const data = await getNPIData(npis[i]);
                     if (data.results && data.results.length > 0) {
                         const p = data.results[0];
-                        const name = makeDisplayName(p.basic || {});
-                        const addr = selectBestAddress(p.addresses || []);
-                        const city = (addr && addr.city) ? addr.city : '';
-                        const state = (addr && addr.state) ? addr.state : '';
-                        const loc = [city, state].filter(Boolean).join(', ');
-                        const url = (name && loc)
-                            ? `https://www.yelp.com/search?find_desc=${encodeURIComponent(name)}&find_loc=${encodeURIComponent(loc)}`
-                            : null;
-
-                        rowData = { npi, name, loc: loc || 'N/A', url };
+                        const name = makeDisplayName(p.basic);
+                        const addr = p.addresses.find(a => a.address_purpose === 'LOCATION') || p.addresses[0];
+                        const loc = addr ? `${addr.city}, ${addr.state}` : 'N/A';
+                        const url = `https://www.yelp.com/search?find_desc=${encodeURIComponent(name)}&find_loc=${encodeURIComponent(loc)}`;
+                        rowData = { npi: npis[i], name, loc, url };
                     } else {
-                        rowData = { npi, name: 'Not Found', loc: 'N/A', url: null };
+                        rowData = { npi: npis[i], name: 'Not Found', loc: 'N/A', url: null };
                     }
                 } catch (e) {
-                    rowData = { npi, name: 'Error Fetching', loc: 'N/A', url: null };
+                    rowData = { npi: npis[i], name: 'Connection Error', loc: 'N/A', url: null };
                 }
 
                 results.push(rowData);
-                updateRow(rowData);
+                renderRow(rowData);
                 updateProgress(i + 1, npis.length, startTime);
-
-                // Small delay to avoid hammering endpoints (optional but safer)
-                await new Promise(r => setTimeout(r, 120));
+                await new Promise(r => setTimeout(r, 200)); // Rate limiting safety
             }
 
-            genBtn.disabled = false;
-            utilBtns.forEach(b => b.style.display = 'inline-block');
-            document.getElementById('statETA').innerText = "Finished";
+            document.getElementById('genBtn').disabled = false;
+            document.querySelectorAll('.util-btn').forEach(b => b.style.display = 'inline-block');
+            document.getElementById('statETA').innerText = "Done";
         }
 
-        function updateRow(data) {
-            const tbody = document.getElementById('tableBody');
+        function renderRow(data) {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>${data.npi}</td>
-                <td>${data.name}</td>
+                <td>**${data.name}**</td>
                 <td>${data.loc}</td>
                 <td>
-                    ${data.url ? 
-                        `<a href="${data.url}" 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            class="yelp-link" 
-                            onclick="this.classList.add('clicked')">
-                            View on Yelp ↗
-                         </a>` 
-                        : '<span class="error-row">N/A</span>'}
+                    ${data.url ? `<a href="${data.url}" target="_blank" class="yelp-link" onclick="this.classList.add('clicked')">View on Yelp ↗</a>` : '<span class="error-row">Unavailable</span>'}
                 </td>
             `;
-            tbody.appendChild(row);
+            document.getElementById('tableBody').appendChild(row);
         }
 
         function updateProgress(current, total, startTime) {
-            const percent = Math.round((current / total) * 100);
-            document.getElementById('progressBar').style.width = percent + '%';
+            const pct = Math.round((current / total) * 100);
+            document.getElementById('progressBar').style.width = pct + '%';
             document.getElementById('statProgress').innerText = `${current}/${total}`;
-            document.getElementById('statPercent').innerText = percent + '%';
-
-            // ETA Calculation
-            const elapsed = Date.now() - startTime;
-            const avgTime = elapsed / current;
-            const remaining = (total - current) * avgTime;
+            document.getElementById('statPercent').innerText = pct + '%';
             
-            if (remaining > 0) {
-                const seconds = Math.round(remaining / 1000);
-                document.getElementById('statETA').innerText = seconds + 's';
-            }
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.round(((elapsed / current) * (total - current)) / 1000);
+            document.getElementById('statETA').innerText = remaining > 0 ? remaining + 's' : '--';
         }
 
         function copyLinks() {
-            const list = results.filter(r => r.url).map(r => r.url).join('\n');
-            navigator.clipboard.writeText(list)
-                .then(() => alert("All URLs copied!"))
-                .catch(() => alert("Copy failed. Your browser may require HTTPS. Export CSV instead."));
+            const text = results.filter(r => r.url).map(r => r.url).join('\n');
+            if (!text) return alert("No URLs to copy.");
+            navigator.clipboard.writeText(text).then(() => alert("Copied to clipboard!"));
         }
 
         function exportCSV() {
             let csv = "NPI,Name,Location,YelpURL\n";
-            results.forEach(r => {
-                const safeName = (r.name || '').replace(/"/g, '""');
-                const safeLoc  = (r.loc || '').replace(/"/g, '""');
-                csv += `${r.npi},"${safeName}","${safeLoc}",${r.url || 'N/A'}\n`;
-            });
+            results.forEach(r => csv += `${r.npi},"${r.name}","${r.loc}",${r.url || 'N/A'}\n`);
             const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('href', url);
-            a.setAttribute('download', 'npi_batch_export.csv');
-            a.click();
-            window.URL.revokeObjectURL(url);
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `npi_export_${new Date().getTime()}.csv`;
+            link.click();
         }
     </script>
 </body>
