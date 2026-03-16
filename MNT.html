@@ -1,245 +1,346 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>MNT & NPI Deep Scan</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>MNT & NPI Deep Scan</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* --- Minimal, non-breaking additions to prevent cutting off --- */
+    .table-container {
+      overflow: auto;              /* allow horizontal scroll if needed */
+      -webkit-overflow-scrolling: touch;
+    }
+    table#resTable {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;         /* predictable column sizing */
+    }
+    #resTable th, #resTable td {
+      padding: 8px 10px;
+      vertical-align: top;
+      word-break: break-word;      /* break long tokens */
+      overflow-wrap: anywhere;
+    }
+    /* column width hints to keep layout tidy */
+    .col-npi { width: 120px; }
+    .col-pwid { width: 120px; }
+    .col-name { width: 220px; }
+    .col-spec { width: 180px; }
+    .col-loc  { width: 160px; }
+    .col-fetch{ width: 90px;  }
+    .col-action { width: 420px; }
+    .col-final  { width: 420px; }
+    .col-status { width: 110px; }
+
+    .url-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;               /* enable flex ellipsis */
+    }
+    .url-link {
+      text-decoration: none;
+      flex: 1 1 auto;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 0.85rem;
+    }
+    .url-link.green { color: #2e7d32; }
+    .url-link.red   { color: #b91c1c; } /* redirected */
+    .copy-container { flex: 0 0 auto; }
+    .error-text { color: #b91c1c; }
+    .time-badge {
+      background: #e2e8f0;
+      color: #0f172a;
+      border-radius: 12px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+    }
+    .status-chip {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+    .status-chip.ok { background: #dcfce7; color: #065f46; }        /* 2xx */
+    .status-chip.redir { background: #fef3c7; color: #92400e; }     /* 3xx */
+    .status-chip.err { background: #fee2e2; color: #991b1b; }       /* 4xx/5xx/ERR */
+  </style>
 </head>
 <body>
-
 <div class="container">
-    <div class="header-area">
-        <h2>Medical News Today Extractor</h2>
-        <div id="timer-box">
-            <div id="etaDisplay" class="eta-main">ETA: --:--</div>
-            <div id="expectedTime" class="expected-at">Expected at: --:--</div>
-        </div>
+  <div class="header-area">
+    <h2>Medical News Today Extractor</h2>
+    <div id="timer-box">
+      <div id="etaDisplay" class="eta-main">ETA: --:--</div>
+      <div id="expectedTime" class="expected-at">Expected at: --:--</div>
     </div>
-    
-    <div class="card">
-        <textarea id="npiInput" placeholder="Paste NPIs (one per line)..."></textarea>
-        <div class="controls">
-            <div class="button-group">
-                <button id="runBtn" class="btn-run">Start MNT Fetch</button>
-                <button id="csvBtn" class="btn-csv">Download CSV</button>
-                <button id="copyAllBtn" class="btn-copy-all">Copy Data</button>
-            </div>
-            <div id="progressContainer" class="progress-container" style="display: none;">
-                <div id="progressBar" class="progress-bar"></div>
-                <span id="progressPercent" class="progress-text">0%</span>
-            </div>
-        </div>
-    </div>
+  </div>
 
-    <div class="table-container">
-        <table id="resTable">
-            <thead>
-                <tr>
-                    <th class="col-npi">NPI</th>
-                    <th class="col-pwid">Int ID</th>
-                    <th class="col-name">Name</th>
-                    <th class="col-spec">Specialty</th>
-                    <th class="col-loc">City, State</th>
-                    <th class="col-fetch">Speed</th>
-                    <th class="col-action">Generated MNT URL</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+  <div class="card">
+    <textarea id="npiInput" placeholder="Paste NPIs (one per line)..."></textarea>
+    <div class="controls">
+      <div class="button-group">
+        <button id="runBtn" class="btn-run">Start MNT Fetch</button>
+        <button id="csvBtn" class="btn-csv">Download CSV</button>
+        <button id="copyAllBtn" class="btn-copy-all">Copy Data</button>
+      </div>
+      <div id="progressContainer" class="progress-container" style="display: none;">
+        <div id="progressBar" class="progress-bar"></div>
+        <span id="progressPercent" class="progress-text">0%</span>
+      </div>
     </div>
+  </div>
+
+  <div class="table-container">
+    <table id="resTable">
+      <thead>
+      <tr>
+        <th class="col-npi">NPI</th>
+        <th class="col-pwid">Int ID</th>
+        <th class="col-name">Name</th>
+        <th class="col-spec">Specialty</th>
+        <th class="col-loc">City, State</th>
+        <th class="col-fetch">Speed</th>
+        <th class="col-action">Generated MNT URL</th>
+        <th class="col-final">Final URL (after redirect)</th>
+        <th class="col-status">HTTP Status</th>
+      </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-    let results = [];
+  let results = [];
 
-    function copyUrl(btn, url) {
-        if (url === "N/A") return;
-        navigator.clipboard.writeText(url).then(() => {
-            const toast = btn.parentElement.querySelector('.copy-toast');
-            if (toast) {
-                toast.classList.add('show');
-                setTimeout(() => toast.classList.remove('show'), 1500);
-            }
-        });
+  function copyUrl(btn, url) {
+    if (url === "N/A") return;
+    navigator.clipboard.writeText(url).then(() => {
+      const toast = btn.parentElement.querySelector('.copy-toast');
+      if (toast) {
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 1500);
+      }
+    });
+  }
+
+  async function fetchNpi(npi, retries = 3) {
+    const start = performance.now();
+    const apiUrl = `https://connect.medicalnewstoday.com/provider/hg-search-api/condition-typeahead?qwhat=${npi}&qwhere=`;
+    for (let i = 0; i < retries; i++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const response = await fetch(apiUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        return { data, time: Math.round(performance.now() - start) };
+      } catch (e) {
+        console.warn(`Attempt ${i + 1} failed for NPI ${npi}. Retrying...`);
+        if (i < retries - 1) await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+      }
+    }
+    return { data: null, time: 'Err' };
+  }
+
+  // Resolve final URL and capture HTTP status
+  async function resolveRedirect(url, timeoutMs = 10000) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const resp = await fetch(url, { method: 'GET', redirect: 'follow', signal: controller.signal, mode: 'cors' });
+      clearTimeout(timeoutId);
+
+      const finalUrl = resp.url || url;
+      const status = typeof resp.status === 'number' ? resp.status : 'ERR';
+
+      const redirected = (() => {
+        try { return new URL(finalUrl).href !== new URL(url).href; }
+        catch { return finalUrl !== url; }
+      })();
+
+      return { finalUrl, redirected, status };
+    } catch (e) {
+      return { finalUrl: url, redirected: false, status: 'ERR' };
+    }
+  }
+
+  document.getElementById('runBtn').onclick = async () => {
+    const overallStart = performance.now();
+    const lines = document.getElementById('npiInput').value.split('\n').map(s => s.trim()).filter(s => s);
+    if (!lines.length) return;
+
+    const runBtn = document.getElementById('runBtn');
+    const timerBox = document.getElementById('timer-box');
+    const etaDisplay = document.getElementById('etaDisplay');
+    const expectedDisplay = document.getElementById('expectedTime');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+
+    runBtn.disabled = true;
+    timerBox.style.display = 'block';
+    progressContainer.style.display = 'flex';
+    progressBar.style.width = '0%';
+    progressPercent.innerText = '0%';
+
+    const tbody = document.querySelector('#resTable tbody');
+    tbody.innerHTML = "";
+    results = [];
+
+    for (let i = 0; i < lines.length; i++) {
+      // UI updates
+      const percent = Math.round(((i + 1) / lines.length) * 100);
+      progressBar.style.width = `${percent}%`;
+      progressPercent.innerText = `${percent}%`;
+      progressPercent.style.color = percent > 55 ? '#ffffff' : '#0f172a';
+
+      const secondsLeft = (lines.length - i) * 2.5;
+      etaDisplay.innerText = `ETA: ${Math.floor(secondsLeft / 60)}m ${Math.ceil(secondsLeft % 60)}s left`;
+      expectedDisplay.innerText = `Expected at: ${new Date(Date.now() + secondsLeft * 1000).toLocaleTimeString()}`;
+
+      // Logic
+      const npi = lines[i];
+      const result = await fetchNpi(npi);
+
+      // Parsing
+      const matchCategory = result.data?.externalItems?.find(x => x.category === "Name Match");
+      const suggestion = matchCategory?.suggestions?.[0];
+
+      let mntUrl = "N/A";
+      let internalId = "N/A";
+
+      if (suggestion && suggestion.url) {
+        const cleanPath = suggestion.url.split('?')[0];
+        const segments = cleanPath.split('-');
+        const rawId = segments[segments.length - 1];
+        internalId = rawId;
+
+        const pathParts = cleanPath.split('/');
+        const filename = pathParts[pathParts.length - 1];
+        const lastHyphenIndex = filename.lastIndexOf('-');
+        if (lastHyphenIndex !== -1) {
+          const slugName = filename.substring(0, lastHyphenIndex);
+          mntUrl = `https://connect.medicalnewstoday.com/provider/${slugName}-${npi}`;
+        } else {
+          mntUrl = `https://connect.medicalnewstoday.com${cleanPath}-${npi}`;
+        }
+      }
+
+      let finalUrl = mntUrl;
+      let wasRedirected = false;
+      let httpStatus = mntUrl === "N/A" ? '—' : 'ERR';
+
+      if (mntUrl !== "N/A") {
+        const resolved = await resolveRedirect(mntUrl);
+        finalUrl = resolved.finalUrl || mntUrl;
+        wasRedirected = !!resolved.redirected;
+        httpStatus = resolved.status ?? 'ERR';
+      }
+
+      const item = {
+        npi: npi,
+        internalId: internalId,
+        name: suggestion ? suggestion.text : "Not Found",
+        spec: suggestion ? suggestion.specialty : "",
+        loc: suggestion ? suggestion.city : "",
+        url: mntUrl,
+        finalUrl: finalUrl,
+        redirected: wasRedirected,
+        status: httpStatus,
+        fetchTime: result.time
+      };
+
+      results.push(item);
+
+      // Table Row
+      const row = tbody.insertRow(0);
+      const nameColor = item.name === "Not Found" ? "error-text" : "";
+      const genUrlClass = "url-link green";
+      const finalUrlClass = item.redirected ? "url-link red" : "url-link green";
+
+      const statusClass = (() => {
+        if (item.status === 'ERR' || (typeof item.status === 'number' && item.status >= 400)) return 'status-chip err';
+        if (typeof item.status === 'number' && item.status >= 300 && item.status < 400) return 'status-chip redir';
+        if (typeof item.status === 'number' && item.status >= 200 && item.status < 300) return 'status-chip ok';
+        return 'status-chip';
+      })();
+
+      row.innerHTML = `
+        <td>${item.npi}</td>
+        <td style="font-family:monospace; color:#64748b">${item.internalId}</td>
+        <td class="${nameColor}"><strong>${item.name}</strong></td>
+        <td>${item.spec}</td>
+        <td>${item.loc}</td>
+        <td><span class="time-badge">${item.fetchTime}ms</span></td>
+        <td>
+          <div class="url-row">
+            <a class="${genUrlClass}" href="${item.url}" target="_blank">${item.url}</a>
+            <div class="copy-container">
+              <span class="copy-toast">Copied!</span>
+              <button class="btn-copy-mini" onclick="copyUrl(this, '${item.url}')">Copy</button>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div class="url-row">
+            <a class="${finalUrlClass}" href="${item.finalUrl}" target="_blank">${item.finalUrl}</a>
+            <div class="copy-container">
+              <span class="copy-toast">Copied!</span>
+              <button class="btn-copy-mini" onclick="copyUrl(this, '${item.finalUrl}')">Copy</button>
+            </div>
+          </div>
+        </td>
+        <td><span class="${statusClass}">${item.status}</span></td>
+      `;
+
+      // Throttle
+      if (i < lines.length - 1) await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
     }
 
-    async function fetchNpi(npi, retries = 3) {
-        const start = performance.now();
-        
-        // MNT API Endpoint
-        const apiUrl = `https://connect.medicalnewstoday.com/provider/hg-search-api/condition-typeahead?qwhat=${npi}&qwhere=`;
+    const overallEnd = performance.now();
+    const totalMs = overallEnd - overallStart;
+    const minutes = Math.floor((totalMs / 1000) / 60);
+    const seconds = Math.floor((totalMs / 1000) % 60);
 
-        for (let i = 0; i < retries; i++) {
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+    runBtn.disabled = false;
+    etaDisplay.innerText = "Completed";
+    expectedDisplay.innerText = `Total: ${minutes}m ${seconds}s`;
+    setTimeout(() => { progressContainer.style.display = 'none'; }, 3000);
+  };
 
-                const response = await fetch(apiUrl, { signal: controller.signal });
-                
-                clearTimeout(timeoutId);
+  // CSV Download (now includes Final_URL and HTTP_Status)
+  document.getElementById('csvBtn').onclick = () => {
+    if(!results.length) return;
+    const header = "NPI,Internal_ID,Name,Specialty,Location,MNT_URL,Final_URL,HTTP_Status,FetchTime\n";
+    const rows = results
+      .map(r => `"${r.npi}","${r.internalId}","${r.name}","${r.spec}","${r.loc}","${r.url}","${r.finalUrl}","${r.status}","${r.fetchTime}"`)
+      .join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `MNT_Scan_Results.csv` });
+    a.click();
+  };
 
-                if (!response.ok) throw new Error('Network response was not ok');
-                
-                const data = await response.json();
-                return { data, time: Math.round(performance.now() - start) };
-                
-            } catch (e) {
-                console.warn(`Attempt ${i + 1} failed for NPI ${npi}. Retrying...`);
-                if (i < retries - 1) await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
-            }
-        }
-        return { data: null, time: 'Err' };
-    }
-
-    document.getElementById('runBtn').onclick = async () => {
-        const overallStart = performance.now();
-        const lines = document.getElementById('npiInput').value.split('\n').map(s => s.trim()).filter(s => s);
-        if (!lines.length) return;
-
-        const runBtn = document.getElementById('runBtn');
-        const timerBox = document.getElementById('timer-box');
-        const etaDisplay = document.getElementById('etaDisplay');
-        const expectedDisplay = document.getElementById('expectedTime');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressPercent = document.getElementById('progressPercent');
-        
-        runBtn.disabled = true;
-        timerBox.style.display = 'block';
-        progressContainer.style.display = 'flex'; // Changed to flex to align text
-        progressBar.style.width = '0%';
-        progressPercent.innerText = '0%';
-        
-        const tbody = document.querySelector('#resTable tbody');
-        tbody.innerHTML = "";
-        results = [];
-
-        for (let i = 0; i < lines.length; i++) {
-            // UI Updates
-            const percent = Math.round(((i + 1) / lines.length) * 100);
-            progressBar.style.width = `${percent}%`;
-            progressPercent.innerText = `${percent}%`;
-            progressPercent.style.color = percent > 55 ? '#ffffff' : '#0f172a';
-
-            const secondsLeft = (lines.length - i) * 2.5; // Adjusted timing est
-            etaDisplay.innerText = `ETA: ${Math.floor(secondsLeft / 60)}m ${Math.ceil(secondsLeft % 60)}s left`;
-            expectedDisplay.innerText = `Expected at: ${new Date(Date.now() + secondsLeft * 1000).toLocaleTimeString()}`;
-
-            // Logic
-            const npi = lines[i];
-            const result = await fetchNpi(npi);
-            
-            // Parsing
-            const matchCategory = result.data?.externalItems?.find(x => x.category === "Name Match");
-            const suggestion = matchCategory?.suggestions?.[0];
-
-            let mntUrl = "N/A";
-            let internalId = "N/A";
-
-            if (suggestion && suggestion.url) {
-                // 1. Get base path (e.g., /provider/dr-michelle-nobles-yq6dm)
-                const cleanPath = suggestion.url.split('?')[0]; 
-                
-                // 2. Extract the Internal ID (the last part after hyphen)
-                // We split by hyphens. The ID is usually the last segment.
-                const segments = cleanPath.split('-');
-                const rawId = segments[segments.length - 1]; // 'yq6dm'
-                
-                // Store Internal ID just in case
-                internalId = rawId;
-
-                // 3. Construct the Slug (remove the ID from the end)
-                // We split the path by '/' to get the filename part
-                const pathParts = cleanPath.split('/');
-                const filename = pathParts[pathParts.length - 1]; // 'dr-michelle-nobles-yq6dm'
-                
-                // Find the LAST hyphen to detach the ID
-                const lastHyphenIndex = filename.lastIndexOf('-');
-                
-                if (lastHyphenIndex !== -1) {
-                    const slugName = filename.substring(0, lastHyphenIndex); // 'dr-michelle-nobles'
-                    // 4. Construct Final URL with NPI
-                    mntUrl = `https://connect.medicalnewstoday.com/provider/${slugName}-${npi}`;
-                } else {
-                    // Fallback if no hyphen found (unlikely), just append NPI
-                    mntUrl = `https://connect.medicalnewstoday.com${cleanPath}-${npi}`;
-                }
-            }
-
-            let item = {
-                npi: npi, 
-                internalId: internalId,
-                name: suggestion ? suggestion.text : "Not Found",
-                spec: suggestion ? suggestion.specialty : "", 
-                loc: suggestion ? suggestion.city : "",
-                url: mntUrl, 
-                fetchTime: result.time
-            };
-
-            results.push(item);
-
-            // Table Row Insertion
-            const row = tbody.insertRow(0);
-            const nameColor = item.name === "Not Found" ? "error-text" : "";
-            
-            row.innerHTML = `
-                <td>${item.npi}</td>
-                <td style="font-family:monospace; color:#64748b">${item.internalId}</td>
-                <td class="${nameColor}"><strong>${item.name}</strong></td>
-                <td>${item.spec}</td>
-                <td>${item.loc}</td>
-                <td><span class="time-badge">${item.fetchTime}ms</span></td>
-                <td>
-                    <div class="url-row">
-                        <a href="${item.url}" target="_blank" style="text-decoration:none; color:#2e7d32; flex-grow:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:0.85rem;">
-                            ${item.url}
-                        </a>
-                        <div class="copy-container">
-                            <span class="copy-toast">Copied!</span>
-                            <button class="btn-copy-mini" onclick="copyUrl(this, '${item.url}')">Copy</button>
-                        </div>
-                    </div>
-                </td>
-            `;
-
-            // Throttle
-            if (i < lines.length - 1) await new Promise(r => setTimeout(r, 1500 + Math.random() * 1000));
-        }
-        
-        const overallEnd = performance.now();
-        const totalMs = overallEnd - overallStart;
-        const minutes = Math.floor((totalMs / 1000) / 60);
-        const seconds = Math.floor((totalMs / 1000) % 60);
-
-        runBtn.disabled = false;
-        etaDisplay.innerText = "Completed"; 
-        expectedDisplay.innerText = `Total: ${minutes}m ${seconds}s`;
-
-        setTimeout(() => { progressContainer.style.display = 'none'; }, 3000);
-    };
-
-    // CSV Download
-    document.getElementById('csvBtn').onclick = () => {
-        if(!results.length) return;
-        const header = "NPI,Internal_ID,Name,Specialty,Location,MNT_URL,FetchTime\n";
-        const rows = results.map(r => `"${r.npi}","${r.internalId}","${r.name}","${r.spec}","${r.loc}","${r.url}","${r.fetchTime}"`).join('\n');
-        const blob = new Blob([header + rows], { type: 'text/csv' });
-        const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `MNT_Scan_Results.csv` });
-        a.click();
-    };
-
-    // Copy to Clipboard
-    document.getElementById('copyAllBtn').onclick = () => {
-        if (!results.length) return;
-        const headers = ["NPI", "Internal ID", "Name", "Specialty", "Location", "MNT URL", "Speed"];
-        const rows = results.map(r => [r.npi, r.internalId, r.name, r.spec, r.loc, r.url, r.fetchTime].join('\t'));
-        navigator.clipboard.writeText([headers.join('\t'), ...rows].join('\n')).then(() => {
-            const btn = document.getElementById('copyAllBtn');
-            const originalText = btn.innerText;
-            btn.innerText = "Copied!";
-            setTimeout(() => btn.innerText = originalText, 2000);
-        });
-    };
+  // Copy to Clipboard (now includes Final URL and HTTP Status)
+  document.getElementById('copyAllBtn').onclick = () => {
+    if (!results.length) return;
+    const headers = ["NPI", "Internal ID", "Name", "Specialty", "Location", "MNT URL", "Final URL", "HTTP Status", "Speed"];
+    const rows = results.map(r => [r.npi, r.internalId, r.name, r.spec, r.loc, r.url, r.finalUrl, r.status, r.fetchTime].join('\t'));
+    navigator.clipboard.writeText([headers.join('\t'), ...rows].join('\n')).then(() => {
+      const btn = document.getElementById('copyAllBtn');
+      const originalText = btn.innerText;
+      btn.innerText = "Copied!";
+      setTimeout(() => btn.innerText = originalText, 2000);
+    });
+  };
 </script>
 </body>
 </html>
