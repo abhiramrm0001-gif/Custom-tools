@@ -44,7 +44,6 @@
 <body>
   <div class="container">
     <h1>🩺 NPI → Yelp URL Builder</h1>
-
     <div class="card">
       <label>NPI List (one per line)</label>
       <textarea id="npiInput" placeholder="Enter 10-digit NPIs..."></textarea>
@@ -59,7 +58,10 @@
       <div class="row">
         <button id="runBtn" class="btn primary">Generate Yelp URLs</button>
         <button id="clearBtn" class="btn">Clear</button>
+        <!-- Export button (added) -->
+        <button id="exportBtn" class="btn">Export CSV</button>
       </div>
+
       <div id="status" class="status"></div>
     </div>
 
@@ -84,6 +86,7 @@
       npiInput: document.getElementById('npiInput'),
       runBtn: document.getElementById('runBtn'),
       clearBtn: document.getElementById('clearBtn'),
+      exportBtn: document.getElementById('exportBtn'),
       proxySelect: document.getElementById('proxySelect'),
       status: document.getElementById('status'),
       resultsBody: document.getElementById('resultsBody'),
@@ -91,19 +94,19 @@
 
     // Settings tuned for fewer "Failed to fetch" incidents.
     const SETTINGS = {
-      maxRounds: 3,           // was 2
-      baseTimeoutMs: 10000,   // was 8000
-      maxTimeoutMs: 20000,    // was 15000
-      baseBackoffMs: 450,     // start backoff a tad higher
-      perRowPacingMs: 300,    // delay between NPIs
+      maxRounds: 3,        // was 2
+      baseTimeoutMs: 10000, // was 8000
+      maxTimeoutMs: 20000,  // was 15000
+      baseBackoffMs: 450,   // start backoff a tad higher
+      perRowPacingMs: 300,  // delay between NPIs
     };
 
     // Proxy roster: preferred (from dropdown) first; then the rest; also attempt "Direct" (no proxy).
     const PROXIES = [
       { name: 'Direct', base: '', isDirect: true },
       { name: 'AllOrigins/raw', base: 'https://api.allorigins.win/raw?url=' },
-      { name: 'CorsProxy.io',   base: 'https://corsproxy.io/?' },
-      { name: 'ThingProxy',     base: 'https://thingproxy.freeboard.io/fetch/' },
+      { name: 'CorsProxy.io', base: 'https://corsproxy.io/?' },
+      { name: 'ThingProxy', base: 'https://thingproxy.freeboard.io/fetch/' },
     ];
 
     function nowTs() { return Date.now(); }
@@ -169,13 +172,13 @@
               throw new Error(statusMsg);
             }
           }
+
           const ct = (res.headers.get('content-type') || '').toLowerCase();
           if (ct.includes('application/json')) return await res.json();
 
           // Fallback: parse text as JSON (some proxies mislabel)
           const text = await res.text();
           try { return JSON.parse(text); } catch { throw new Error(`Bad JSON from ${proxyMeta.name}`); }
-
         } catch (err) {
           lastErr = err;
           const msg = String(err && err.message || err);
@@ -299,11 +302,10 @@
         alert('You appear to be offline. Please check your connection and try again.');
         return;
       }
-
       els.resultsBody.innerHTML = '';
       els.status.textContent = 'Starting… (enhanced retries + per-row Retry enabled)';
-
       const preferred = els.proxySelect.value;
+
       let success = 0;
       let failedNpis = [];
 
@@ -338,6 +340,40 @@
       els.resultsBody.innerHTML = '';
       els.status.textContent = '';
       els.npiInput.value = '';
+    });
+
+    // Export CSV (success rows)
+    els.exportBtn.addEventListener('click', () => {
+      const rows = Array.from(els.resultsBody.querySelectorAll('tr.success-row'));
+      if (!rows.length) {
+        alert('No successful rows to export yet.');
+        return;
+      }
+      const header = ['NPI', 'Provider Name', 'Location', 'Yelp Search'];
+      const csv = [header.join(',')];
+
+      for (const row of rows) {
+        const tds = row.querySelectorAll('td');
+        const npi = (tds[0]?.textContent || '').trim();
+        const name = (tds[1]?.textContent || '').trim().replace(/\s+/g, ' ');
+        const loc = (tds[2]?.textContent || '').trim();
+        let yelp = '';
+        const link = tds[3]?.querySelector('a');
+        if (link) yelp = link.href;
+
+        const line = [npi, name, loc, yelp].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+        csv.push(line);
+      }
+
+      const blob = new Blob(['\uFEFF' + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `npi_yelp_links_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
   </script>
 </body>
