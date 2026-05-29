@@ -348,17 +348,33 @@ tbody tr:hover {
     }
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-test {
+    background: #8b5cf6; /* A nice purple to distinguish it from action buttons */
+    color: #ffffff;
+    padding: 10px 16px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+        
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header-area">
-            <h2>Healthgrades Extractor</h2>
-            <div id="timer-box">
-                <div id="etaDisplay" class="eta-main">ETA: --:--</div>
-                <div id="expectedTime" class="expected-at">Expected at: --:--</div>
-            </div>
+    <h2>Healthgrades Extractor</h2>
+    <div class="header-right">
+        <button id="testBtn" class="btn-test">HG NPI fron URL </button>
+        <div id="timer-box">
+            <div id="etaDisplay" class="eta-main">ETA: --:--</div>
+            <div id="expectedTime" class="expected-at">Expected at: --:--</div>
         </div>
+    </div>
+</div>
 
         <div class="card">
             <textarea id="npiInput" placeholder="Paste NPIs (one per line)..."></textarea>
@@ -636,6 +652,11 @@ tbody tr:hover {
                 alert("Failed to copy table.");
             });
         };
+
+        document.getElementById("testBtn").onclick = () => {
+    // Opens the URL in a new tab
+    window.open("https://abhiramrm0001-gif.github.io/Custom-tools/HGNPI.html", "_blank");
+};
     </script>
 </body>
 </html>
