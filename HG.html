@@ -24,7 +24,7 @@ body {
 }
 
 .container {
-    max-width: 1400px;
+    max-width: 98%; /* Allows it to stretch across the whole screen */
     margin: 0 auto;
     height: calc(100vh - 48px);
     display: flex;
@@ -199,7 +199,6 @@ button:disabled {
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 1200px;
 }
 
 thead th {
@@ -310,14 +309,14 @@ tbody tr:hover {
     transform: translateX(-50%) translateY(0);
 }
 
-.col-npi { min-width: 120px; }
-.col-pwid { min-width: 120px; }
-.col-name { min-width: 220px; }
-.col-spec { min-width: 180px; }
-.col-loc { min-width: 250px; }
-.col-fetch { min-width: 100px; }
-.col-status { min-width: 120px; }
-.col-action { min-width: 360px; }
+.col-npi { width: 8%; min-width: 90px; }
+.col-pwid { width: 8%; min-width: 90px; }
+.col-name { width: 15%; min-width: 150px; }
+.col-spec { width: 15%; min-width: 150px; }
+.col-loc { width: 20%; min-width: 180px; }
+.col-fetch { width: 7%; min-width: 80px; }
+.col-status { width: 9%; min-width: 100px; }
+.col-action { width: 18%; min-width: 220px; }
 
 @media (max-width: 768px) {
     body {
