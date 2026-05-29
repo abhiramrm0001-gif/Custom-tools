@@ -1,233 +1,617 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>NPI & PWID Deep Scan</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .header-area h2 {
+            margin: 0;
+            font-size: 28px;
+            color: #0f172a;
+        }
+
+        #timer-box {
+            display: none;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 12px 16px;
+            box-shadow: 0 4px 18px rgba(15, 23, 42, 0.06);
+            min-width: 220px;
+        }
+
+        .eta-main {
+            font-size: 16px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 4px;
+        }
+
+        .expected-at {
+            font-size: 13px;
+            color: #475569;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            padding: 18px;
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+            margin-bottom: 20px;
+        }
+
+        #npiInput {
+            width: 100%;
+            min-height: 160px;
+            resize: vertical;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            padding: 14px;
+            font-size: 14px;
+            outline: none;
+            background: #f8fafc;
+            color: #0f172a;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        #npiInput:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+            background: #ffffff;
+        }
+
+        .controls {
+            margin-top: 14px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        button {
+            border: none;
+            border-radius: 12px;
+            padding: 11px 16px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-run {
+            background: #2563eb;
+            color: #ffffff;
+        }
+
+        .btn-csv {
+            background: #16a34a;
+            color: #ffffff;
+        }
+
+        .btn-copy-all {
+            color: #ffffff;
+        }
+
+        .btn-copy-mini {
+            background: #0f172a;
+            color: #ffffff;
+            padding: 7px 10px;
+            font-size: 12px;
+            border-radius: 10px;
+            box-shadow: none;
+            white-space: nowrap;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 22px;
+            background: #e2e8f0;
+            border-radius: 999px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #2563eb, #38bdf8);
+            border-radius: 999px;
+            transition: width 0.35s ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e293b;
+            pointer-events: none;
+        }
+
+        .table-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            overflow: auto;
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            background: #eff6ff;
+            color: #0f172a;
+            font-size: 13px;
+            text-align: left;
+            padding: 14px 12px;
+            border-bottom: 1px solid #dbeafe;
+            z-index: 1;
+            white-space: nowrap;
+        }
+
+        tbody td {
+            padding: 14px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+            font-size: 14px;
+            color: #1e293b;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #fcfdff;
+        }
+
+        tbody tr:hover {
+            background: #f8fbff;
+        }
+
+        .time-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #e0f2fe;
+            color: #075985;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .status-green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-yellow {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .status-red {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .url-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 280px;
+        }
+
+        .url-row a {
+            display: inline-block;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .copy-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .copy-toast {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%) translateY(4px);
+            background: #0f172a;
+            color: #ffffff;
+            font-size: 12px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+
+        .copy-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .col-npi { min-width: 120px; }
+        .col-pwid { min-width: 120px; }
+        .col-name { min-width: 220px; }
+        .col-spec { min-width: 180px; }
+        .col-loc { min-width: 250px; }
+        .col-fetch { min-width: 100px; }
+        .col-status { min-width: 120px; }
+        .col-action { min-width: 360px; }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+
+            .header-area {
+                align-items: flex-start;
+            }
+
+            .header-area h2 {
+                font-size: 24px;
+            }
+
+            #timer-box {
+                width: 100%;
+            }
+
+            .button-group {
+                width: 100%;
+            }
+
+            .button-group button {
+                flex: 1 1 auto;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <div class="header-area">
+            <h2>Healthgrades Extractor</h2>
+            <div id="timer-box">
+                <div id="etaDisplay" class="eta-main">ETA: --:--</div>
+                <div id="expectedTime" class="expected-at">Expected at: --:--</div>
+            </div>
+        </div>
 
-<div class="container">
-    <div class="header-area">
-        <h2>Healthgrades Extractor</h2>
-        <div id="timer-box">
-            <div id="etaDisplay" class="eta-main">ETA: --:--</div>
-            <div id="expectedTime" class="expected-at">Expected at: --:--</div>
+        <div class="card">
+            <textarea id="npiInput" placeholder="Paste NPIs (one per line)..."></textarea>
+
+            <div class="controls">
+                <div class="button-group">
+                    <button id="runBtn" class="btn-run">Start Fetch</button>
+                    <button id="csvBtn" class="btn-csv">Download CSV</button>
+                    <button id="copyAllBtn" style="background: #64748b;" class="btn-copy-all">Copy</button>
+                </div>
+
+                <div id="progressContainer" class="progress-container" style="display: none;">
+                    <div id="progressBar" class="progress-bar"></div>
+                    <span id="progressPercent" class="progress-text">0%</span>
+                </div>
+
+                <div id="progressBar" class="progress-bar"></div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table id="resTable">
+                <thead>
+                    <tr>
+                        <th class="col-npi">NPI</th>
+                        <th class="col-pwid">PWID</th>
+                        <th class="col-name">Name</th>
+                        <th class="col-spec">Specialty</th>
+                        <th class="col-loc">Location (only main)</th>
+                        <th class="col-fetch">Speed</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-action">Healthgrades Profile URL</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
         </div>
     </div>
-    
-    <div class="card">
-        <textarea id="npiInput" placeholder="Paste NPIs (one per line)..."></textarea>
-        <div class="controls">
-    <div class="button-group">
-        <button id="runBtn" class="btn-run">Start Fetch</button>
-        <button id="csvBtn" class="btn-csv">Download CSV</button>
-        <button id="copyAllBtn" style="background: #64748b;" class="btn-copy-all">Copy</button>
-    </div>
-<div id="progressContainer" class="progress-container" style="display: none;">
-    <div id="progressBar" class="progress-bar"></div>
-    <span id="progressPercent" class="progress-text">0%</span>
-</div>
-        <div id="progressBar" class="progress-bar"></div>
-    </div>
-</div>
-    </div>
 
-    <div class="table-container">
-        <table id="resTable">
-            <thead>
-                <tr>
-                    <th class="col-npi">NPI</th>
-                    <th class="col-pwid">PWID</th>
-                    <th class="col-name">Name</th>
-                    <th class="col-spec">Specialty</th>
-                    <th class="col-loc">Location (only main)</th>
-                    <th class="col-fetch">Speed</th>
-                    <th class="col-action">Healthgrades Profile URL</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</div>
+    <script>
+        let results = [];
 
-<script>
-    let results = [];
+        function copyUrl(btn, url) {
+            if (url === "N/A") return;
 
-    function copyUrl(btn, url) {
-        if (url === "N/A") return;
-
-        navigator.clipboard.writeText(url).then(() => {
-            const toast = btn.parentElement.querySelector('.copy-toast');
-            if (toast) {
-                toast.classList.add('show');
-                setTimeout(() => {
-                    toast.classList.remove('show');
-                }, 1500);
-            }
-        }).catch(err => {
-            console.error('Failed to copy: ', err);
-        });
-    }
-
- 
-        async function fetchNpi(npi, retries = 3) {
-    const start = performance.now();
-    
-    for (let i = 0; i < retries; i++) {
-        try {
-            // Added a 10-second timeout signal to prevent hanging indefinitely
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-            const response = await fetch(`https://apps.healthgrades.com/api/list-requests/check/?list=leqembi-2&npi=${npi}`, 
-                { signal: controller.signal }
-            );
-            
-            clearTimeout(timeoutId);
-
-            if (!response.ok) throw new Error('Network response was not ok');
-            
-            const data = await response.json();
-            return { data, time: Math.round(performance.now() - start) };
-            
-        } catch (e) {
-            console.warn(`Attempt ${i + 1} failed for NPI ${npi}. Retrying...`);
-            // Wait 1 second before retrying to let the network "breathe"
-            if (i < retries - 1) await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+            navigator.clipboard.writeText(url).then(() => {
+                const toast = btn.parentElement.querySelector(".copy-toast");
+                if (toast) {
+                    toast.classList.add("show");
+                    setTimeout(() => {
+                        toast.classList.remove("show");
+                    }, 1500);
+                }
+            }).catch(err => {
+                console.error("Failed to copy: ", err);
+            });
         }
-    }
-    
-    // If all retries fail, return the error state
-    return { data: null, time: 'Err' };
-}
 
+        function renderStatusBadge(status) {
+            if (status === 200) {
+                return `<span class="status-badge status-green">✅ 200</span>`;
+            }
 
-   document.getElementById('runBtn').onclick = async () => {
-    const overallStart = performance.now(); // Record the start time
-    const lines = document.getElementById('npiInput').value.split('\n').map(s => s.trim()).filter(s => s);
-    if (!lines.length) return;
+            if (status === 404 || status === 500) {
+                return `<span class="status-badge status-yellow">⚠️ ${status}</span>`;
+            }
 
-    const runBtn = document.getElementById('runBtn');
-    const timerBox = document.getElementById('timer-box');
-    const etaDisplay = document.getElementById('etaDisplay');
-    const expectedDisplay = document.getElementById('expectedTime');
-    
-    // Progress Bar Elements
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const progressPercent = document.getElementById('progressPercent');
-    
-    runBtn.disabled = true;
-    timerBox.style.display = 'block';
-    progressContainer.style.display = 'flex';
-    progressBar.style.width = '0%';
-    progressPercent.innerText = '0%';
-    
-    const tbody = document.querySelector('#resTable tbody');
-    tbody.innerHTML = "";
-    results = [];
+            if (status === "Timeout" || status === "Error" || status === 400) {
+                return `<span class="status-badge status-red">❌ ${status}</span>`;
+            }
 
-    for (let i = 0; i < lines.length; i++) {
-        // Update Progress Bar
-        const percent = Math.round(((i + 1) / lines.length) * 100);
-        progressBar.style.width = `${percent}%`;
-        progressPercent.innerText = `${percent}%`;
-        progressPercent.style.color = percent > 90 ? '#ffffff' : '#1e293b';
+            return `<span class="status-badge status-red">❌ ${status || "Error"}</span>`;
+        }
 
-        const secondsLeft = (lines.length - i) * 2.8;
-        etaDisplay.innerText = `ETA: ${Math.floor(secondsLeft / 60)}m ${Math.ceil(secondsLeft % 60)}s left`;
-        expectedDisplay.innerText = `Expected at: ${new Date(Date.now() + secondsLeft * 1000).toLocaleTimeString()}`;
+        async function fetchNpi(npi, retries = 3) {
+            const start = performance.now();
+            let lastStatus = "Error";
 
-        const npi = lines[i];
-        const result = await fetchNpi(npi);
-        const data = result.data;
-        
-        let item = {
-            npi: npi, pwid: data?.pwid || "N/A", name: data?.name || "N/A",
-            spec: data?.speciality || "N/A", loc: data?.address || "N/A",
-            url: data?.profile || "N/A", fetchTime: result.time
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                    const response = await fetch(
+                        `https://apps.healthgrades.com/api/list-requests/check/?list=leqembi-2&npi=${npi}`,
+                        { signal: controller.signal }
+                    );
+
+                    clearTimeout(timeoutId);
+
+                    let data = null;
+                    try {
+                        data = await response.json();
+                    } catch (e) {
+                        data = null;
+                    }
+
+                    const elapsed = Math.round(performance.now() - start);
+
+                    if (response.status === 200) {
+                        if (!data || (typeof data === "object" && Object.keys(data).length === 0)) {
+                            return { data: null, time: elapsed, status: "Error" };
+                        }
+                        return { data, time: elapsed, status: 200 };
+                    }
+
+                    if (response.status === 400 || response.status === 404 || response.status === 500) {
+                        return { data: null, time: elapsed, status: response.status };
+                    }
+
+                    return { data: null, time: elapsed, status: "Error" };
+                } catch (e) {
+                    lastStatus = e.name === "AbortError" ? "Timeout" : "Error";
+                    console.warn(`Attempt ${i + 1} failed for NPI ${npi}. Retrying...`);
+
+                    if (i < retries - 1) {
+                        await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+                    }
+                }
+            }
+
+            return { data: null, time: "Err", status: lastStatus };
+        }
+
+        document.getElementById("runBtn").onclick = async () => {
+            const overallStart = performance.now();
+            const lines = document.getElementById("npiInput").value
+                .split("\n")
+                .map(s => s.trim())
+                .filter(s => s);
+
+            if (!lines.length) return;
+
+            const runBtn = document.getElementById("runBtn");
+            const timerBox = document.getElementById("timer-box");
+            const etaDisplay = document.getElementById("etaDisplay");
+            const expectedDisplay = document.getElementById("expectedTime");
+
+            const progressContainer = document.getElementById("progressContainer");
+            const progressBar = document.getElementById("progressBar");
+            const progressPercent = document.getElementById("progressPercent");
+
+            runBtn.disabled = true;
+            timerBox.style.display = "block";
+            progressContainer.style.display = "flex";
+            progressBar.style.width = "0%";
+            progressPercent.innerText = "0%";
+
+            const tbody = document.querySelector("#resTable tbody");
+            tbody.innerHTML = "";
+            results = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const percent = Math.round(((i + 1) / lines.length) * 100);
+                progressBar.style.width = `${percent}%`;
+                progressPercent.innerText = `${percent}%`;
+                progressPercent.style.color = percent > 90 ? "#ffffff" : "#1e293b";
+
+                const secondsLeft = (lines.length - i) * 2.8;
+                etaDisplay.innerText = `ETA: ${Math.floor(secondsLeft / 60)}m ${Math.ceil(secondsLeft % 60)}s left`;
+                expectedDisplay.innerText = `Expected at: ${new Date(Date.now() + secondsLeft * 1000).toLocaleTimeString()}`;
+
+                const npi = lines[i];
+                const result = await fetchNpi(npi);
+                const data = result.data;
+
+                let item = {
+                    npi: npi,
+                    pwid: data?.pwid || "N/A",
+                    name: data?.name || "N/A",
+                    spec: data?.speciality || "N/A",
+                    loc: data?.address || "N/A",
+                    url: data?.profile || "N/A",
+                    fetchTime: result.time,
+                    status: result.status
+                };
+
+                results.push(item);
+
+                const row = tbody.insertRow(0);
+                row.innerHTML = `
+                    <td>${item.npi}</td>
+                    <td style="font-family:monospace; color:#2563eb">${item.pwid}</td>
+                    <td><strong>${item.name}</strong></td>
+                    <td>${item.spec}</td>
+                    <td>${item.loc}</td>
+                    <td><span class="time-badge">${item.fetchTime}ms</span></td>
+                    <td>${renderStatusBadge(item.status)}</td>
+                    <td>
+                        <div class="url-row">
+                            <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; flex-grow:1; overflow:hidden; text-overflow:ellipsiscontainer">
+                                <span class="copy-toast">Copied!</span>
+                                <button class="btn-copy-mini" onclick="copyUrl(this, '${item.url}')">Copy</button>
+                            </div>
+                        </div>
+                    </td>
+                `;
+
+                if (i < lines.length - 1) {
+                    await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
+                }
+            }
+
+            const overallEnd = performance.now();
+            const totalMs = overallEnd - overallStart;
+            const totalSeconds = Math.floor(totalMs / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+
+            runBtn.disabled = false;
+            etaDisplay.innerText = "Completed";
+            expectedDisplay.innerText = `Time taken: ${minutes}m ${seconds}s`;
+
+            setTimeout(() => {
+                progressContainer.style.display = "none";
+            }, 3000);
+
+            runBtn.disabled = false;
         };
 
-        results.push(item);
-        const row = tbody.insertRow(0);
-        row.innerHTML = `
-            <td>${item.npi}</td>
-            <td style="font-family:monospace; color:#2563eb">${item.pwid}</td>
-            <td><strong>${item.name}</strong></td>
-            <td>${item.spec}</td>
-            <td>${item.loc}</td>
-            <td><span class="time-badge">${item.fetchTime}ms</span></td>
-            <td>
-                <div class="url-row">
-                    <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; flex-grow:1; overflow:hidden; text-overflow:ellipsis;">
-                        ${item.url}
-                    </a>
-                    <div class="copy-container">
-                        <span class="copy-toast">Copied!</span>
-                        <button class="btn-copy-mini" onclick="copyUrl(this, '${item.url}')">Copy</button>
-                    </div>
-                </div>
-            </td>
-        `;
+        document.getElementById("csvBtn").onclick = () => {
+            if (!results.length) return;
 
-        if (i < lines.length - 1) await new Promise(r => setTimeout(r, 2000 + Math.random() * 1000));
-    }
-    
-    const overallEnd = performance.now();
-    const totalMs = overallEnd - overallStart;
-    const totalSeconds = Math.floor(totalMs / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
+            const header = "NPI,PWID,Name,Specialty,Location,URL,FetchTime,Status\n";
+            const rows = results.map(r =>
+                `"${r.npi}","${r.pwid}","${r.name}","${r.spec}","${r.loc}","${r.url}","${r.fetchTime}","${r.status}"`
+            ).join("\n");
 
-    runBtn.disabled = false;
-    etaDisplay.innerText = "Completed"; 
-    expectedDisplay.innerText = `Time taken: ${minutes}m ${seconds}s`;
+            const blob = new Blob([header + rows], { type: "text/csv" });
+            const a = Object.assign(document.createElement("a"), {
+                href: URL.createObjectURL(blob),
+                download: `NPI_Scan_Results.csv`
+            });
 
-    setTimeout(() => { progressContainer.style.display = 'none'; }, 3000);
-    runBtn.disabled = false;
-};
+            a.click();
+        };
 
-    document.getElementById('csvBtn').onclick = () => {
-        if(!results.length) return;
-        const header = "NPI,PWID,Name,Specialty,Location,URL,FetchTime\n";
-        const rows = results.map(r => `"${r.npi}","${r.pwid}","${r.name}","${r.spec}","${r.loc}","${r.url}","${r.fetchTime}"`).join('\n');
-        const blob = new Blob([header + rows], { type: 'text/csv' });
-        const a = Object.assign(document.createElement('a'), {
-            href: URL.createObjectURL(blob),
-            download: `NPI_Scan_Results.csv`
-        });
-        a.click();
-    };
+        document.getElementById("copyAllBtn").onclick = () => {
+            if (!results.length) {
+                alert("No results to copy!");
+                return;
+            }
 
-    document.getElementById('copyAllBtn').onclick = () => {
-        if (!results.length) {
-            alert("No results to copy!");
-            return;
-        }
+            const headers = ["NPI", "PWID", "Name", "Specialty", "Location", "URL", "Speed (ms)", "Status"];
+            const rows = results.map(r => [
+                r.npi,
+                r.pwid,
+                r.name,
+                r.spec,
+                r.loc,
+                r.url,
+                r.fetchTime,
+                r.status
+            ].join("\t"));
 
-        const headers = ["NPI", "PWID", "Name", "Specialty", "Location", "URL", "Speed (ms)"];
-        const rows = results.map(r => [
-            r.npi, r.pwid, r.name, r.spec, r.loc, r.url, r.fetchTime
-        ].join('\t'));
+            const fullTableString = [headers.join("\t"), ...rows].join("\n");
 
-        const fullTableString = [headers.join('\t'), ...rows].join('\n');
+            navigator.clipboard.writeText(fullTableString).then(() => {
+                const btn = document.getElementById("copyAllBtn");
+                const originalText = btn.innerText;
+                btn.innerText = "Table Copied!";
+                btn.style.background = "#0f172a";
 
-        navigator.clipboard.writeText(fullTableString).then(() => {
-            const btn = document.getElementById('copyAllBtn');
-            const originalText = btn.innerText;
-            btn.innerText = "Table Copied!";
-            btn.style.background = "#0f172a";
-            
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.background = "#475569";
-            }, 2000);
-        }).catch(err => {
-            console.error('Could not copy table: ', err);
-            alert("Failed to copy table.");
-        });
-    };
-</script>
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.background = "#475569";
+                }, 2000);
+            }).catch(err => {
+                console.error("Could not copy table: ", err);
+                alert("Failed to copy table.");
+            });
+        };
+    </script>
 </body>
 </html>
