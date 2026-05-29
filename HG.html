@@ -548,14 +548,19 @@ tbody tr:hover {
                     <td>${item.loc}</td>
                     <td><span class="time-badge">${item.fetchTime}ms</span></td>
                     <td>${renderStatusBadge(item.status)}</td>
-                    <td>
-                        <div class="url-row">
-                            <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; flex-grow:1; overflow:hidden; text-overflow:ellipsiscontainer">
-                                <span class="copy-toast">Copied!</span>
-                                <button class="btn-copy-mini" onclick="copyUrl(this, '${item.url}')">Copy</button>
-                            </div>
-                        </div>
-                    </td>
+                    // ✅ CORRECTED CODE
+<td>
+    <div class="url-row">
+        <a href="${item.url}" target="_blank" style="text-decoration:none; color:inherit; flex-grow:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${item.url}
+        </a>
+        
+        <div class="copy-container">
+            <span class="copy-toast">Copied!</span>
+            <button class="btn-copy-mini" onclick="copyUrl(this, '${item.url}')">Copy</button>
+        </div>
+    </div>
+</td>
                 `;
 
                 if (i < lines.length - 1) {
