@@ -3,23 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Professional Entity Search Tool</title>
+
     <style>
         :root {
             --primary-color: #2c3e50;
             --accent-color: #3498db;
+            --accent-hover: #2980b9;
+            --success-color: #27ae60;
+            --success-hover: #219150;
+            --secondary-color: #7f8c8d;
+            --secondary-hover: #626e70;
             --bg-color: #f4f7f6;
             --card-bg: #ffffff;
             --border-color: #e0e0e0;
-            --visited-color: #e8f5e9; /* Light green for clicked rows */
+            --visited-color: #e8f5e9;
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: #333;
             margin: 0;
-            padding: 40px;
+            padding: 40px 20px;
             display: flex;
             justify-content: center;
         }
@@ -30,7 +41,7 @@
             background-color: var(--card-bg);
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
         }
 
         h2 {
@@ -45,7 +56,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr 1fr auto;
             gap: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             align-items: end;
         }
 
@@ -63,13 +74,22 @@
         }
 
         input {
+            width: 100%;
+            height: 45px;
             padding: 12px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 15px;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.12);
         }
 
         button {
+            height: 45px;
             padding: 12px 25px;
             background-color: var(--accent-color);
             color: white;
@@ -77,19 +97,68 @@
             border-radius: 4px;
             font-weight: 600;
             cursor: pointer;
-            height: 45px;
-            transition: background 0.2s;
+            transition:
+                background-color 0.2s,
+                transform 0.1s;
         }
 
-        button:hover { background-color: #2980b9; }
+        button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .bulk-actions {
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 10px 0 25px;
+            padding: 18px;
+            background-color: #f8f9fa;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .bulk-actions.visible {
+            display: grid;
+        }
+
+        .open-direct-button {
+            background-color: var(--success-color);
+        }
+
+        .open-direct-button:hover {
+            background-color: var(--success-hover);
+        }
+
+        .open-site-button {
+            background-color: var(--secondary-color);
+        }
+
+        .open-site-button:hover {
+            background-color: var(--secondary-hover);
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 5px;
         }
 
-        th, td {
+        th,
+        td {
             text-align: left;
             padding: 12px;
             border-bottom: 1px solid var(--border-color);
@@ -100,9 +169,13 @@
             color: var(--primary-color);
         }
 
-        /* The magic "Clicked" state */
-        tr.clicked-row {
-            background-color: var(--visited-color) !important;
+        tbody tr:hover {
+            background-color: #f8fbfd;
+        }
+
+        tr.clicked-row,
+        tr.clicked-row:hover {
+            background-color: var(--visited-color);
             transition: background-color 0.3s ease;
         }
 
@@ -112,139 +185,342 @@
             font-weight: 500;
         }
 
-        a:hover { text-decoration: underline; }
+        a:hover {
+            text-decoration: underline;
+        }
 
-        .site-col { background-color: #fcfcfc; }
-        
+        .site-col {
+            background-color: #fcfcfc;
+        }
+
+        tr.clicked-row .site-col {
+            background-color: transparent;
+        }
+
         code {
-            background: #eee;
-            padding: 2px 4px;
+            background-color: #eee;
+            padding: 2px 5px;
             border-radius: 3px;
             font-size: 0.85em;
             color: #d35400;
         }
-    </style>
-</head>
-<body>
 
-<div class="container">
-    <h2>Entity Search Generator</h2>
-
-    <div class="input-group">
-        <div class="input-wrapper">
-            <label for="entityName">Entity Name</label>
-            <input type="text" id="entityName" placeholder="e.g. Acme Corp">
-        </div>
-        <div class="input-wrapper">
-            <label for="address">Street Address</label>
-            <input type="text" id="address" placeholder="e.g. 123 Main St">
-        </div>
-        <div class="input-wrapper">
-            <label for="location">City, State</label>
-            <input type="text" id="location" placeholder="e.g. Miami, FL">
-        </div>
-        <button onclick="generateLinks()">Generate Results</button>
-    </div>
-
-    <table id="resultsTable" style="display:none;">
-        <thead>
-            <tr>
-                <th width="40%">Direct Platform Search</th>
-                <th width="60%">Google Site: Search </th>
-            </tr>
-        </thead>
-        <tbody id="resultsBody"></tbody>
-    </table>
-</div>
-
-<script>
-    function markAsVisited(element) {
-        // Finds the parent row of the clicked link and adds the class
-        const row = element.closest('tr');
-        row.classList.add('clicked-row');
-    }
-
-    function generateLinks() {
-        const name = document.getElementById('entityName').value.trim();
-        const loc = document.getElementById('location').value.trim();
-        const addr = document.getElementById('address').value.trim();
-        const tbody = document.getElementById('resultsBody');
-        const table = document.getElementById('resultsTable');
-
-        if (!name || !loc) {
-            alert("Please enter Name and Location.");
-            return;
+        .note {
+            display: none;
+            margin: -10px 0 20px;
+            color: #666;
+            font-size: 0.88rem;
         }
 
-        const nameEnc = encodeURIComponent(name);
-        const locEnc = encodeURIComponent(loc);
-        const addrEnc = encodeURIComponent(addr);
-        
-        // Full Google Query string
-        const fullQuery = encodeURIComponent(`${name} ${addr} ${loc}`);
+        .note.visible {
+            display: block;
+        }
 
-        const sources = [
-            {
-                title: "Google Search (Full)",
-                domain: null,
-                directUrl: `https://www.google.com/search?q=${fullQuery}`,
-                isSpecial: true
-            },
-            {
-                title: "BBB",
-                domain: "bbb.org",
-                directUrl: `https://www.bbb.org/search?find_text=${nameEnc}&find_loc=${locEnc}`
-            },
-            {
-                title: "Yelp",
-                domain: "yelp.com",
-                directUrl: `https://www.yelp.com/search?find_desc=${nameEnc}&find_loc=${locEnc}`
-            },
-            {
-                title: "Superpages",
-                domain: "superpages.com",
-                directUrl: `https://www.superpages.com/search?search_terms=${nameEnc}&geo_location_terms=${locEnc}`
-            },
-            {
-                title: "Yellowpages",
-                domain: "yellowpages.com",
-                directUrl: `https://www.yellowpages.com/search?search_terms=${nameEnc}&geo_location_terms=${locEnc}`
-            },
-            {
-                title: "Foursquare",
-                domain: "foursquare.com",
-                directUrl: `https://app.foursquare.com/explore?mode=url&near=${locEnc}&q=${nameEnc}`
-            }, // Added missing comma here
-            {
-                title: "Bing",
-                domain: "Bing.com",
-                directUrl: `https://www.bing.com/maps/search?q=${fullQuery}`
-            }
-        ];
-
-        let htmlRows = "";
-
-        sources.forEach(source => {
-            let siteSearchLink = "";
-            if (source.domain) {
-                const googleUrl = `https://www.google.com/search?q=site:${source.domain}+${fullQuery}`;
-                siteSearchLink = `<a href="${googleUrl}" target="_blank" onclick="markAsVisited(this)"><code>site:${source.domain}</code> Search</a>`;
-            } else {
-                siteSearchLink = source.isSpecial ? "<strong>Comprehensive Search</strong>" : "<em>N/A</em>";
+        @media (max-width: 850px) {
+            body {
+                padding: 20px 10px;
             }
 
-            htmlRows += `
-                <tr>
-                    <td><a href="${source.directUrl}" target="_blank" onclick="markAsVisited(this)">${source.title} Direct</a></td>
-                    <td class="site-col">${siteSearchLink}</td>
-                </tr>
-            `;
-        });
+            .container {
+                padding: 20px;
+            }
 
-        tbody.innerHTML = htmlRows;
-        table.style.display = "table";
-    }
-</script>
+            .input-group {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
 
+        @media (max-width: 600px) {
+            .input-group,
+            .bulk-actions {
+                grid-template-columns: 1fr;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            th,
+            td {
+                min-width: 240px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Entity Search Generator</h2>
+
+        <div class="input-group">
+            <div class="input-wrapper">
+                <label for="entityName">Entity Name</label>
+                <input
+                    type="text"
+                    id="entityName"
+                    placeholder="e.g. Acme Corp"
+                >
+            </div>
+
+            <div class="input-wrapper">
+                <label for="address">Street Address</label>
+                <input
+                    type="text"
+                    id="address"
+                    placeholder="e.g. 123 Main St"
+                >
+            </div>
+
+            <div class="input-wrapper">
+                <label for="location">City, State</label>
+                <input
+                    type="text"
+                    id="location"
+                    placeholder="e.g. Miami, FL"
+                >
+            </div>
+
+            <button type="button" onclick="generateLinks()">
+                Generate Results
+            </button>
+        </div>
+
+        <div class="bulk-actions" id="bulkActions">
+            <button
+                type="button"
+                class="open-direct-button"
+                onclick="openAllDirectSearches()"
+            >
+                Open All Direct Platform Searches
+            </button>
+
+            <button
+                type="button"
+                class="open-site-button"
+                onclick="openAllGoogleSiteSearches()"
+            >
+                Open All Google Site Searches
+            </button>
+        </div>
+
+        <p class="note" id="popupNote">
+            If some searches do not open, allow pop-ups for this page and try
+            again.
+        </p>
+
+        <div class="table-wrapper">
+            <table id="resultsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th style="width: 40%;">
+                            Direct Platform Search
+                        </th>
+                        <th style="width: 60%;">
+                            Google Site Search
+                        </th>
+                    </tr>
+                </thead>
+
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let directSearchUrls = [];
+        let googleSiteSearchUrls = [];
+
+        function markAsVisited(element) {
+            const row = element.closest("tr");
+
+            if (row) {
+                row.classList.add("clicked-row");
+            }
+        }
+
+        function markRowsByLinkClass(className) {
+            const links = document.querySelectorAll("." + className);
+
+            links.forEach(function (link) {
+                const row = link.closest("tr");
+
+                if (row) {
+                    row.classList.add("clicked-row");
+                }
+            });
+        }
+
+        function openUrls(urls) {
+            if (!urls.length) {
+                alert("Please generate the search results first.");
+                return;
+            }
+
+            urls.forEach(function (url) {
+                window.open(url, "_blank", "noopener,noreferrer");
+            });
+        }
+
+        function openAllDirectSearches() {
+            openUrls(directSearchUrls);
+            markRowsByLinkClass("direct-search-link");
+        }
+
+        function openAllGoogleSiteSearches() {
+            openUrls(googleSiteSearchUrls);
+            markRowsByLinkClass("site-search-link");
+        }
+
+        function generateLinks() {
+            const name = document
+                .getElementById("entityName")
+                .value
+                .trim();
+
+            const address = document
+                .getElementById("address")
+                .value
+                .trim();
+
+            const location = document
+                .getElementById("location")
+                .value
+                .trim();
+
+            const tbody = document.getElementById("resultsBody");
+            const table = document.getElementById("resultsTable");
+            const bulkActions = document.getElementById("bulkActions");
+            const popupNote = document.getElementById("popupNote");
+
+            if (!name || !location) {
+                alert("Please enter the Entity Name and City, State.");
+                return;
+            }
+
+            const nameEncoded = encodeURIComponent(name);
+            const locationEncoded = encodeURIComponent(location);
+
+            const fullQuery = [name, address, location]
+                .filter(Boolean)
+                .join(" ");
+
+            const fullQueryEncoded = encodeURIComponent(fullQuery);
+
+            // Bing has been removed.
+            const sources = [
+                {
+                    title: "Google Search (Full)",
+                    domain: null,
+                    directUrl:
+                        "https://www.google.com/search?q=" +
+                        fullQueryEncoded,
+                    isSpecial: true
+                },
+                {
+                    title: "BBB",
+                    domain: "bbb.org",
+                    directUrl:
+                        "https://www.bbb.org/search?find_text=" +
+                        nameEncoded +
+                        "&find_loc=" +
+                        locationEncoded
+                },
+                {
+                    title: "Yelp",
+                    domain: "yelp.com",
+                    directUrl:
+                        "https://www.yelp.com/search?find_desc=" +
+                        nameEncoded +
+                        "&find_loc=" +
+                        locationEncoded
+                },
+                {
+                    title: "Superpages",
+                    domain: "superpages.com",
+                    directUrl:
+                        "https://www.superpages.com/search?search_terms=" +
+                        nameEncoded +
+                        "&geo_location_terms=" +
+                        locationEncoded
+                },
+                {
+                    title: "Yellowpages",
+                    domain: "yellowpages.com",
+                    directUrl:
+                        "https://www.yellowpages.com/search?search_terms=" +
+                        nameEncoded +
+                        "&geo_location_terms=" +
+                        locationEncoded
+                },
+                {
+                    title: "Foursquare",
+                    domain: "foursquare.com",
+                    directUrl:
+                        "https://app.foursquare.com/explore?mode=url&near=" +
+                        locationEncoded +
+                        "&q=" +
+                        nameEncoded
+                }
+            ];
+
+            directSearchUrls = [];
+            googleSiteSearchUrls = [];
+
+            let htmlRows = "";
+
+            sources.forEach(function (source) {
+                directSearchUrls.push(source.directUrl);
+
+                let siteSearchCell;
+
+                if (source.domain) {
+                    const siteQuery =
+                        "site:" + source.domain + " " + fullQuery;
+
+                    const googleSiteUrl =
+                        "https://www.google.com/search?q=" +
+                        encodeURIComponent(siteQuery);
+
+                    googleSiteSearchUrls.push(googleSiteUrl);
+
+                    siteSearchCell = `
+                        ${googleSiteUrl}
+                            <code>site:${source.domain}</code> Search
+                        </a>
+                    `;
+                } else {
+                    siteSearchCell = source.isSpecial
+                        ? "<strong>Comprehensive Search</strong>"
+                        : "<em>N/A</em>";
+                }
+
+                htmlRows += `
+                    <tr>
+                        <td>
+                            <a
+                                href="${source.directUrl}"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                class="direct-search-link"
+                                onclick="markAsVisited(this)"
+                             });
+
+            tbody.innerHTML = htmlRows;
+            table.style.display = "table";
+            bulkActions.classList.add("visible");
+            popupNote.classList.add("visible");
+        }
+
+        // Generate results when Enter is pressed in any input field.
+        document
+            .querySelectorAll("#entityName, #address, #location")
+            .forEach(function (input) {
+                input.addEventListener("keydown", function (event) {
+                    if (event.key === "Enter") {
+                        generateLinks();
+                    }
+                });
+            });
+    </script>
 </body>
 </html>
